@@ -1,0 +1,2313 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1F1E1D" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#FAF9F5" media="(prefers-color-scheme: light)">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Chatbot Gemini</title>
+    <script>
+        /* Tema antes del primer render (como claude.ai: sigue la preferencia del
+           sistema y después se puede cambiar a mano desde el encabezado). */
+        (function () {
+            try {
+                var saved = localStorage.getItem('gemini_theme');
+                var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+                if ((saved || (prefersLight ? 'light' : 'dark')) === 'light') {
+                    document.documentElement.classList.remove('dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com" onerror="window.__twFailed=true"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Tipografía tipo claude.ai: sans para la interfaz (Styrene B ≈ Inter) y
+         serif para el texto de las respuestas (Tiempos Text ≈ Source Serif 4) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+    <script>
+        /* Paleta tipo claude.ai con variables CSS: tema claro y oscuro reales.
+           Si el CDN de Tailwind no cargó (sin internet, bloqueado, o file://),
+           evitamos que este script rompa el resto de la página. */
+        if (typeof tailwind === 'undefined') {
+            window.tailwind = { config: {}, __missing: true };
+        }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        claude: {
+                            bg: 'rgb(var(--c-bg) / <alpha-value>)',
+                            sidebar: 'rgb(var(--c-sidebar) / <alpha-value>)',
+                            card: 'rgb(var(--c-card) / <alpha-value>)',
+                            raised: 'rgb(var(--c-raised) / <alpha-value>)',
+                            hover: 'rgb(var(--c-hover) / <alpha-value>)',
+                            border: 'rgb(var(--c-border) / <alpha-value>)',
+                            text: 'rgb(var(--c-text) / <alpha-value>)',
+                            muted: 'rgb(var(--c-muted) / <alpha-value>)',
+                            accent: 'rgb(var(--c-accent) / <alpha-value>)',
+                            'accent-hover': 'rgb(var(--c-accent-hover) / <alpha-value>)',
+                            /* alias de compatibilidad con el JS existente (text-claude-amber, etc.) */
+                            amber: {
+                                DEFAULT: 'rgb(var(--c-accent) / <alpha-value>)',
+                                hover: 'rgb(var(--c-accent-hover) / <alpha-value>)',
+                                light: 'rgb(var(--c-accent-hover) / <alpha-value>)',
+                                bg: 'rgb(var(--c-accent) / 0.12)'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ===== Paleta tipo claude.ai (claro: marfil cálido / oscuro: grafito cálido) ===== */
+        :root {
+            --c-bg: 250 249 245;          /* #FAF9F5 área de chat */
+            --c-sidebar: 240 238 230;     /* #F0EEE6 crema */
+            --c-card: 255 255 255;        /* compositor / tarjetas */
+            --c-raised: 240 238 230;      /* burbuja del usuario */
+            --c-hover: 233 230 221;
+            --c-border: 227 224 214;
+            --c-text: 31 30 29;           /* #1F1E1D */
+            --c-muted: 112 110 101;
+            --c-accent: 201 100 66;       /* #C96442 naranja Claude */
+            --c-accent-hover: 178 84 50;
+            --code-bg: 31 30 29;          /* bloques de código oscuros como en claude.ai */
+            --code-text: 240 238 230;
+        }
+        html.dark {
+            --c-bg: 38 38 36;             /* #262624 */
+            --c-sidebar: 31 30 29;        /* #1F1E1D */
+            --c-card: 48 48 46;           /* #30302E */
+            --c-raised: 47 46 43;
+            --c-hover: 61 61 58;          /* #3D3D3A */
+            --c-border: 63 63 59;
+            --c-text: 240 238 230;        /* #F0EEE6 */
+            --c-muted: 157 154 146;
+            --c-accent: 217 119 87;       /* #D97757 */
+            --c-accent-hover: 228 138 105;
+            --code-bg: 26 26 24;
+            --code-text: 240 238 230;
+        }
+
+        html, body { height: 100%; }
+        body {
+            background-color: rgb(var(--c-bg));
+            color: rgb(var(--c-text));
+            font-family: 'Inter', 'Styrene B', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            letter-spacing: -0.006em;
+            text-rendering: optimizeLegibility;
+            /* Móvil: evita el "zoom" al enfocar y respeta el notch/barra de gestos */
+            -webkit-text-size-adjust: 100%;
+            overscroll-behavior: none;
+        }
+        /* Altura real de la pantalla en móvil: dvh con fallback para Chrome antiguo */
+        body { height: 100vh; height: 100dvh; }
+        /* Respeta las zonas seguras (notch, barra de gestos) en el header y el footer */
+        #historySidebar { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+        header { padding-top: env(safe-area-inset-top, 0px); }
+        #textComposer, #voiceControls { margin-bottom: env(safe-area-inset-bottom, 0px); }
+        #footerNote { margin-bottom: calc(env(safe-area-inset-bottom, 0px)); }
+        /* Serif de las respuestas, como Tiempos Text en claude.ai */
+        .font-serif-claude {
+            font-family: 'Source Serif 4', 'Tiempos Text', Georgia, 'Times New Roman', serif;
+            letter-spacing: 0;
+        }
+
+        ::selection { background: rgb(var(--c-accent) / 0.22); }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgb(var(--c-muted) / 0.35); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-muted) / 0.55); }
+
+        /* Columna de chat como flex para poder centrar la bienvenida */
+        #chatMessages { display: flex; flex-direction: column; }
+        #chatMessages > * { flex-shrink: 0; }
+
+        /* Overlay: esperando el permiso del micrófono */
+        #micPermOverlay {
+            position: fixed; inset: 0; z-index: 70;
+            display: none; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(3px);
+        }
+        #micPermOverlay.show { display: flex; }
+
+        @keyframes amberPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.55; transform: scale(0.96); }
+        }
+        .animate-amber-pulse { animation: amberPulse 1.8s infinite ease-in-out; }
+
+        @keyframes micPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgb(var(--c-accent) / 0.45); }
+            50% { box-shadow: 0 0 0 9px rgb(var(--c-accent) / 0); }
+        }
+        .animate-mic-pulse { animation: micPulse 1.5s infinite; }
+
+        /* ===== Markdown (respuestas en serif 16px, como claude.ai) ===== */
+        .markdown-body { font-size: 16px; line-height: 1.65; color: rgb(var(--c-text)); }
+        .markdown-body p { margin-bottom: 0.75rem; }
+        .markdown-body > *:first-child { margin-top: 0; }
+        .markdown-body > *:last-child { margin-bottom: 0; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+            font-family: 'Inter', 'Styrene B', -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: rgb(var(--c-text));
+            margin: 1.1rem 0 0.4rem;
+            line-height: 1.3;
+        }
+        .markdown-body h1 { font-size: 1.4rem; }
+        .markdown-body h2 { font-size: 1.2rem; }
+        .markdown-body h3 { font-size: 1.05rem; }
+        .markdown-body h4 { font-size: 0.95rem; }
+        .markdown-body ul { list-style-type: disc; padding-left: 1.4rem; margin-bottom: 0.75rem; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 1.4rem; margin-bottom: 0.75rem; }
+        .markdown-body li { margin-bottom: 0.3rem; }
+        .markdown-body li::marker { color: rgb(var(--c-muted)); }
+        .markdown-body strong { font-weight: 600; color: rgb(var(--c-text)); }
+        .markdown-body em { font-style: italic; }
+        .markdown-body a { color: rgb(var(--c-accent)); text-decoration: underline; text-underline-offset: 2px; }
+        .markdown-body hr { border: 0; border-top: 1px solid rgb(var(--c-border)); margin: 1rem 0; }
+        .markdown-body blockquote {
+            border-left: 2px solid rgb(var(--c-border));
+            padding-left: 0.9rem;
+            color: rgb(var(--c-muted));
+            margin: 0.6rem 0;
+        }
+        .markdown-body code {
+            background-color: rgb(var(--c-hover));
+            color: rgb(var(--c-text));
+            padding: 0.12em 0.38em;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        .markdown-body pre {
+            background-color: rgb(var(--code-bg));
+            color: rgb(var(--code-text));
+            padding: 14px 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 0.6rem 0;
+            border: 1px solid rgb(var(--c-border) / 0.6);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        .markdown-body pre code { background: transparent; padding: 0; color: inherit; font-size: inherit; }
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.8rem 0;
+            font-size: 14px;
+            font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        .markdown-body th, .markdown-body td { border: 1px solid rgb(var(--c-border)); padding: 0.45rem 0.7rem; text-align: left; }
+        .markdown-body th { background-color: rgb(var(--c-hover) / 0.6); font-weight: 600; }
+        .markdown-body tr:nth-child(even) { background-color: rgb(var(--c-hover) / 0.25); }
+
+        /* ===== MODO VOZ ===== */
+        #orbCanvas { display: none; }
+        #voiceControls { display: none; }
+        body.voice-on #orbCanvas { display: block; }
+        body.voice-on #voiceControls { display: flex; }
+        body.voice-on #textComposer,
+        body.voice-on #footerNote { display: none; }
+        body.voice-on #chatMessages { padding-bottom: 7rem; }
+        .live-bubble { border-style: dashed !important; font-style: italic; }
+
+        /* ===== Respaldo si el CDN de Tailwind no carga (sin internet / bloqueado) ===== */
+        #twWarning { display: none; }
+        html.tw-missing #twWarning {
+            display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            background: #b91c1c; color: #fff; font: 13px/1.5 system-ui, sans-serif;
+            padding: 8px 12px; text-align: center;
+        }
+        /* Utilidades mínimas para que la app no quede rota sin Tailwind */
+        html.tw-missing body { display: block; overflow: auto; height: auto; background: rgb(var(--c-bg)); color: rgb(var(--c-text)); }
+        html.tw-missing #historySidebar { display: none; }
+        html.tw-missing #chatMessages { padding: 16px; overflow: visible; }
+        html.tw-missing #textComposer { background: rgb(var(--c-card)); border: 1px solid rgb(var(--c-border)); border-radius: 20px; padding: 12px; margin: 8px; }
+        html.tw-missing #userInput { width: 100%; background: transparent; color: rgb(var(--c-text)); border: 0; outline: none; font-size: 16px; resize: none; }
+        html.tw-missing #settingsModal, html.tw-missing #micHelpPanel, html.tw-missing #micPermOverlay { color: rgb(var(--c-text)); }
+        html.tw-missing #settingsModal.hidden, html.tw-missing #micHelpPanel.hidden { display: none; }
+        html.tw-missing #settingsModal:not(.hidden), html.tw-missing #micHelpPanel:not(.hidden) { display: flex; align-items: center; justify-content: center; }
+        html.tw-missing .bg-claude-card { background: rgb(var(--c-card)); }
+    </style>
+</head>
+<body class="h-[100dvh] w-screen flex overflow-hidden antialiased">
+
+<!-- Aviso si el CDN de Tailwind no cargó (sin internet) -->
+<div id="twWarning">⚠️ Sin conexión: no se pudieron cargar los estilos (Tailwind). La app funciona igual, pero se ve sin formato. Reconectate y recargá para verla bien.</div>
+
+<!-- Orbe de voz (flotante, translúcido, sobre el chat) -->
+<canvas id="orbCanvas" class="fixed inset-0 w-full h-full pointer-events-none z-10"></canvas>
+
+<!-- Overlay: esperando el permiso del micrófono -->
+<div id="micPermOverlay">
+    <div class="bg-claude-card border border-claude-border rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 text-center space-y-4">
+        <div class="mx-auto w-12 h-12 rounded-full bg-claude-accent/10 text-claude-accent flex items-center justify-center">
+            <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 016 0v6a3 3 0 01-3 3z"></path></svg>
+        </div>
+        <div class="space-y-1">
+            <h3 class="text-[15px] font-semibold text-claude-text">Esperando el permiso del micrófono</h3>
+            <p class="text-[13px] text-claude-muted leading-relaxed">Mirá la barra de direcciones del navegador y elegí <span class="font-medium text-claude-text">Permitir</span> cuando te lo pida.</p>
+        </div>
+        <button onclick="cancelMicRequest()" class="w-full py-2 rounded-lg border border-claude-border text-[13px] text-claude-muted hover:bg-claude-hover transition-colors">Cancelar</button>
+    </div>
+</div>
+
+<!-- Panel de ayuda del micrófono (bloqueado / sin micro / ocupado / inseguro) -->
+<div id="micHelpPanel" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-claude-card border border-claude-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="p-5 border-b border-claude-border flex items-start gap-3">
+            <div id="micHelpIcon" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-500/10 text-red-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.66-3.88l-7-12a2 2 0 00-3.32 0l-7 12A2 2 0 005 19z"></path></svg>
+            </div>
+            <div class="min-w-0">
+                <h3 id="micHelpTitle" class="text-[15px] font-semibold text-claude-text">Micrófono bloqueado</h3>
+                <p id="micHelpDesc" class="text-[13px] text-claude-muted mt-0.5 leading-relaxed"></p>
+            </div>
+        </div>
+        <ol id="micHelpSteps" class="px-5 py-4 space-y-2.5 text-[13px] leading-relaxed text-claude-text list-decimal list-inside"></ol>
+        <div class="px-5 pb-5 flex gap-2">
+            <button onclick="retryMicPermission()" class="flex-1 py-2 rounded-lg bg-claude-accent hover:bg-claude-accent-hover text-white text-[13px] font-medium transition-colors">Reintentar</button>
+            <button onclick="closeMicHelp()" class="flex-1 py-2 rounded-lg border border-claude-border text-[13px] text-claude-muted hover:bg-claude-hover transition-colors">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Barra lateral de historial -->
+<aside id="historySidebar" class="w-[260px] bg-claude-sidebar border-r border-claude-border flex flex-col h-full transition-all duration-300 z-30 fixed lg:relative -translate-x-full lg:translate-x-0">
+    <div class="p-3 flex items-center gap-2">
+        <button onclick="createNewChat()" class="flex-1 flex items-center gap-2 h-9 px-3 rounded-lg border border-claude-border hover:bg-claude-hover text-[13.5px] font-medium text-claude-text transition-colors">
+            <svg class="w-4 h-4 text-claude-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Nuevo chat
+        </button>
+        <button onclick="toggleSidebar()" class="lg:hidden text-claude-muted hover:text-claude-text p-1.5">✕</button>
+    </div>
+
+    <div class="px-4 pt-1 pb-1 text-[12px] font-medium text-claude-muted">Recientes</div>
+    <div id="historyList" class="flex-1 overflow-y-auto px-2.5 pb-2 space-y-0.5"></div>
+
+    <div class="p-3 border-t border-claude-border/60">
+        <button onclick="clearAllHistory()" class="w-full text-left text-[12.5px] text-claude-muted hover:text-red-400 px-2 py-1.5 rounded-lg hover:bg-claude-hover transition-colors flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            Borrar todo el historial
+        </button>
+    </div>
+</aside>
+
+<div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden"></div>
+
+<div class="flex-1 flex flex-col h-full min-w-0 bg-claude-bg">
+    <div class="flex flex-col flex-1 h-full max-w-[48rem] mx-auto px-4 sm:px-6 w-full min-w-0">
+
+        <!-- Header (altura y densidad de claude.ai) -->
+        <header class="h-[52px] flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <button onclick="toggleSidebar()" class="lg:hidden text-claude-muted hover:text-claude-text p-1.5 rounded-lg hover:bg-claude-hover transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <div class="w-7 h-7 rounded-lg bg-claude-accent text-white flex items-center justify-center text-[14px] shrink-0">✦</div>
+                <span id="currentChatTitle" class="text-[13.5px] font-medium text-claude-text truncate max-w-[220px] sm:max-w-xs">Gemini Chatbot</span>
+            </div>
+
+            <div class="flex items-center gap-1">
+                <button id="themeBtn" onclick="toggleTheme()" class="p-2 rounded-lg text-claude-muted hover:text-claude-text hover:bg-claude-hover transition-colors" title="Cambiar tema claro/oscuro"></button>
+                <button id="settingsBtn" onclick="openSettings()" class="p-2 rounded-lg text-claude-muted hover:text-claude-text hover:bg-claude-hover transition-colors" title="Configuración">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mensajes -->
+        <main id="chatMessages" class="flex-1 overflow-y-auto py-6 space-y-7 pr-1"></main>
+
+        <!-- Footer -->
+        <footer class="pb-4 pt-1 shrink-0 relative z-20">
+            <!-- Compositor de texto (estilo claude.ai) -->
+            <div id="textComposer" class="relative bg-claude-card border border-claude-border focus-within:border-claude-accent/60 rounded-[20px] pl-4 pr-3 pt-3 pb-2.5 shadow-sm transition-colors">
+                <textarea
+                    id="userInput"
+                    rows="1"
+                    placeholder="¿En qué te puedo ayudar hoy?"
+                    class="w-full bg-transparent text-claude-text placeholder-claude-muted text-[16px] leading-relaxed resize-none outline-none max-h-48"
+                ></textarea>
+
+                <div class="flex items-center justify-between mt-1">
+                    <div class="flex items-center gap-0.5">
+                        <button id="journalistBtn" onclick="toggleJournalistMode()" class="text-claude-muted hover:text-claude-text p-2 rounded-lg hover:bg-claude-hover transition-colors flex items-center justify-center" title="Modo Periodista de Investigación">
+                            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6m-6 4h4"></path>
+                            </svg>
+                        </button>
+
+                        <button id="continuousVoiceBtn" onclick="toggleContinuousVoice()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-claude-hover text-[12.5px] text-claude-muted transition-colors" title="Activar Modo Voz">
+                            <span id="voiceStatusDot" class="w-2 h-2 rounded-full bg-claude-muted"></span>
+                            <span id="voiceStatusLabel" class="hidden sm:inline">Modo Voz</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <button id="micBtn" onclick="toggleMic()" class="text-claude-muted hover:text-claude-text p-2 rounded-lg hover:bg-claude-hover transition-colors flex items-center justify-center" title="Dictar mensaje por voz">
+                            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 016 0v6a3 3 0 01-3 3z"></path>
+                            </svg>
+                        </button>
+                        <button id="sendBtn" onclick="sendMessage()" class="w-8 h-8 rounded-lg bg-claude-accent hover:bg-claude-accent-hover text-white flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed ml-0.5" title="Enviar mensaje">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19V5m0 0l-7 7m7-7l7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles del Modo Voz -->
+            <div id="voiceControls" class="items-center justify-between gap-3 bg-claude-card border border-claude-border rounded-[20px] px-4 py-3 shadow-sm">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span id="voiceStateDot" class="w-2.5 h-2.5 rounded-full shrink-0" style="background:rgb(var(--c-accent))"></span>
+                    <span id="voiceStateLabel" class="text-[13.5px] text-claude-text truncate">Escuchando…</span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button id="pauseBtn" onclick="toggleMicPause()" class="px-3 py-1.5 rounded-lg text-[12.5px] border border-claude-border hover:bg-claude-hover text-claude-text transition-colors">⏸ Pausar mic</button>
+                    <button onclick="interruptVoice()" class="px-3 py-1.5 rounded-lg text-[12.5px] border border-claude-border hover:bg-claude-hover text-claude-text transition-colors" title="Cortar la respuesta y volver a escuchar">⏭ Interrumpir</button>
+                    <button onclick="stopVoiceMode()" class="px-3 py-1.5 rounded-lg text-[12.5px] bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 transition-colors">✕ Terminar</button>
+                </div>
+            </div>
+
+            <p id="footerNote" class="text-[11.5px] text-center text-claude-muted mt-2">El historial de chat se almacena localmente en tu dispositivo. Las respuestas pueden contener errores: verificá la información importante.</p>
+        </footer>
+    </div>
+</div>
+
+<!-- Modal de Configuración -->
+<div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-claude-card border border-claude-border w-full max-w-[520px] rounded-2xl shadow-2xl relative max-h-[92vh] overflow-y-auto">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-claude-border/80 sticky top-0 bg-claude-card z-10">
+            <h3 class="text-[15px] font-semibold text-claude-text">Configuración</h3>
+            <button onclick="closeSettings()" class="text-claude-muted hover:text-claude-text p-1 rounded-md hover:bg-claude-hover">✕</button>
+        </div>
+
+        <div class="px-5 py-5 space-y-5">
+            <!-- Micrófono -->
+            <div class="space-y-2">
+                <label class="block text-[13px] font-medium text-claude-text">Micrófono</label>
+                <div class="flex items-center gap-2 bg-claude-raised border border-claude-border rounded-xl px-3 py-2.5">
+                    <span id="micPermDot" class="w-2 h-2 rounded-full bg-claude-muted shrink-0"></span>
+                    <span id="micPermLabel" class="text-[12.5px] text-claude-muted truncate">Sin verificar</span>
+                    <button onclick="requestMicFromSettings()" class="ml-auto shrink-0 text-[12.5px] font-medium px-3 py-1.5 rounded-lg border border-claude-border hover:bg-claude-hover text-claude-text transition-colors">Solicitar permiso</button>
+                </div>
+                <select id="micDeviceSelect" class="w-full bg-claude-raised border border-claude-border rounded-xl px-3 py-2.5 text-[13px] text-claude-text focus:outline-none focus:border-claude-accent">
+                    <option value="">Micrófono predeterminado del sistema</option>
+                </select>
+                <div class="flex items-center gap-2">
+                    <button id="micTestBtn" onclick="toggleMicTest()" class="shrink-0 text-[12.5px] font-medium px-3 py-1.5 rounded-lg border border-claude-border hover:bg-claude-hover text-claude-text transition-colors">Probar micrófono</button>
+                    <div class="flex-1 h-1.5 bg-claude-hover rounded-full overflow-hidden">
+                        <div id="micTestBar" class="h-full bg-claude-accent rounded-full transition-[width] duration-75" style="width:0%"></div>
+                    </div>
+                </div>
+                <p class="text-[11.5px] text-claude-muted leading-relaxed">Si quedó bloqueado: hacé clic en el candado 🔒 de la barra de direcciones → <b>Micrófono → Permitir</b>, recargá la página (F5) y volvé a probar.</p>
+            </div>
+
+            <div class="space-y-1.5 hidden">
+                <label class="block text-[13px] font-medium text-claude-accent">Google Gemini API Key:</label>
+                <input
+                    type="password"
+                    id="apiKeyInput"
+                    class="w-full bg-claude-raised border border-claude-border rounded-xl p-2.5 text-[12.5px] text-claude-text placeholder-claude-muted focus:outline-none focus:border-claude-accent font-mono"
+                    placeholder="Pegá tu API Key de Google AI Studio (AIzaSy...)"
+                />
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="block text-[13px] font-medium text-claude-text">System Prompt (Instrucción de Sistema):</label>
+                <textarea
+                    id="systemPromptInput"
+                    rows="3"
+                    class="w-full bg-claude-raised border border-claude-border rounded-xl p-3 text-[13px] text-claude-text placeholder-claude-muted focus:outline-none focus:border-claude-accent resize-none"
+                    placeholder="Escribe las instrucciones para el asistente..."
+                ></textarea>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="block text-[13px] font-medium text-claude-text">Voz para Síntesis de Texto (TTS):</label>
+                <select id="voiceSelect" class="w-full bg-claude-raised border border-claude-border rounded-xl px-3 py-2.5 text-[13px] text-claude-text focus:outline-none focus:border-claude-accent">
+                    <option value="">Cargando voces disponibles...</option>
+                </select>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <span class="text-[13px] text-claude-text font-medium">Leer respuestas en voz alta automáticamente</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="autoTTS" class="sr-only peer" checked>
+                    <div class="w-9 h-5 bg-claude-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-claude-accent"></div>
+                </label>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 px-5 py-4 border-t border-claude-border/80">
+            <button onclick="closeSettings()" class="px-4 py-2 rounded-lg text-[13px] border border-claude-border hover:bg-claude-hover text-claude-muted transition-colors">Cancelar</button>
+            <button onclick="saveSettings()" class="px-4 py-2 rounded-lg text-[13px] bg-claude-accent hover:bg-claude-accent-hover text-white font-medium transition-colors">Guardar cambios</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let API_KEY = "AQ.Ab8RN6IlZ0Jr8B2UnCbMxpGu6jhvt-t89bTCMpdUUWAlqisDiw";
+
+    function getApiUrl() {
+        return `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+    }
+
+    /* ============================ Referencias DOM ============================ */
+    const chatMessages = document.getElementById('chatMessages');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+    const journalistBtn = document.getElementById('journalistBtn');
+    const voiceSelect = document.getElementById('voiceSelect');
+    const systemPromptInput = document.getElementById('systemPromptInput');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const autoTTSInput = document.getElementById('autoTTS');
+    const orbCanvas = document.getElementById('orbCanvas');
+    const micPermDot = document.getElementById('micPermDot');
+    const micPermLabel = document.getElementById('micPermLabel');
+    const micDeviceSelect = document.getElementById('micDeviceSelect');
+
+    /* ============================ Prompts / Ajustes ============================ */
+    const DEFAULT_SYSTEM_PROMPT = "Sos un asistente inteligente altamente estructurado. Siempre que respondas, utiliza la mayor cantidad de recursos visuales y de formato posibles: tablas explicativas para datos o comparaciones, listas ordenadas y con viñetas, bloques de código cuando aplique, y negritas para resaltar conceptos clave. Evita bloques de texto plano uniforme.";
+    const JOURNALIST_SYSTEM_PROMPT = "Sos un periodista de investigación senior y analista riguroso. Tu objetivo es realizar investigaciones exhaustivas, objetivas y detalladas sobre cualquier tema solicitado. Estructura tus respuestas como informes periodísticos completos con: 1) Resumen Ejecutivo / Titular y Copete, 2) Contexto y Antecedentes Históricos, 3) Análisis Detallado de los Hechos o Datos con Tablas comparativas y Cronologías, 4) Múltiples Perspectivas o Fuentes de Debate, y 5) Conclusiones Periodísticas. Prioriza la verificación de datos y la imparcialidad.";
+    const VOICE_ADDENDUM = "\n\nIMPORTANTE: el usuario te está hablando por voz y tu respuesta será leída en voz alta. Respondé de forma conversacional, natural y breve (idealmente 2 a 5 oraciones). No uses tablas, bloques de código, listas largas, emojis ni símbolos de formato markdown. Esta indicación tiene prioridad sobre cualquier instrucción anterior de formato.";
+
+    let customSystemPrompt = DEFAULT_SYSTEM_PROMPT;
+    let isJournalistMode = false;
+    let autoTTS = true;
+    let storedVoiceName = '';
+
+    function getEffectiveSystemPrompt() {
+        let p = isJournalistMode ? JOURNALIST_SYSTEM_PROMPT : customSystemPrompt;
+        if (voiceActive) p += VOICE_ADDENDUM;
+        return p;
+    }
+
+    function loadSettings() {
+        try {
+            const s = JSON.parse(localStorage.getItem('gemini_settings') || '{}');
+            if (s.systemPrompt) customSystemPrompt = s.systemPrompt;
+            if (typeof s.autoTTS === 'boolean') autoTTS = s.autoTTS;
+            if (s.voiceName) storedVoiceName = s.voiceName;
+        } catch (e) { console.warn('Error leyendo ajustes', e); }
+    }
+
+    function persistSettings() {
+        try {
+            localStorage.setItem('gemini_settings', JSON.stringify({
+                systemPrompt: customSystemPrompt,
+                autoTTS: autoTTS,
+                voiceName: voiceSelect.value || storedVoiceName
+            }));
+        } catch (e) { console.warn('Error guardando ajustes', e); }
+    }
+
+    /* ============================ Estado global ============================ */
+    let chatsHistory = [];
+    let currentChatId = null;
+    let isBusy = false;
+    let currentAbort = null;
+
+    /* Voz */
+    let recognition = null;
+    let recRunning = false;
+    let recMode = 'dictate';          // 'dictate' | 'voice'
+    let dictActive = false;           // dictado continuo activado por el usuario
+    let dictBase = '';
+    let finalBuf = '';
+    let interimBuf = '';
+    let lastRecError = '';
+    let voiceActive = false;
+    let startingVoice = false;        // guarda anti-doble-toque de "Modo Voz"
+    let micPaused = false;
+    let voiceState = 'idle';          // idle | listening | thinking | speaking | paused
+    let listenTimer = null;
+    let isSpeaking = false;
+    let speakToken = 0;
+    let currentUtterance = null;
+    let boundaryKick = 0;
+    let liveEl = null;
+    let recFailCount = 0;             // fallos consecutivos del reconocedor
+    let recStartWatchdog = null;      // vigila start() colgado
+    let recListenWatchdog = null;     // vigila escucha congelada sin eventos
+    let analyserBlocked = false;      // getUserMedia falla de forma persistente
+    let userTogglingMic = false;      // guarda anti-doble-toque del botón de micrófono
+    let ttsPrimed = false;            // TTS ya desbloqueado con gesto de usuario
+    let settingsPausedMic = false;    // mic pausado automáticamente al abrir ajustes
+
+    /* Permisos y dispositivos de micrófono */
+    let micPermState = 'unknown';     // unknown | prompt | requesting | granted | denied | unavailable | busy
+    let micPermStatus = null;         // PermissionStatus (si el navegador lo expone)
+    let micPermGrantedStream = null;  // stream obtenido al pedir permiso (se reutiliza para el orbe)
+    let selectedDeviceId = '';        // micrófono elegido en Ajustes
+    let micTestStream = null, micTestCtx = null, micTestAnalyser = null, micTestData = null, micTestRAF = null;
+    let iframeHintShown = false;
+    let themeRGBs = null;             // cache de colores del tema para el orbe
+
+    /* ============================ Init ============================ */
+    // Detecta si Tailwind no cargó y activa el modo de respaldo (la app sigue usable).
+    function detectTailwind() {
+        const missing = typeof tailwind === 'undefined' || !tailwind.config || tailwind.__missing === true;
+        if (missing) document.documentElement.classList.add('tw-missing');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        detectTailwind();
+        loadSettings();
+        loadHistoryFromStorage();
+        initThemeUI();
+        queryMicPermission();
+        refreshMicDevices();
+        restoreMicDevice();
+        if (micDeviceSelect) {
+            micDeviceSelect.addEventListener('change', () => {
+                selectedDeviceId = micDeviceSelect.value || '';
+                try { localStorage.setItem('gemini_mic_device', selectedDeviceId); } catch (e) {}
+            });
+        }
+        if (userInput) userInput.addEventListener('input', autoGrowTextarea);
+        if (chatsHistory.length === 0) {
+            createNewChat();
+        } else {
+            loadChatSession(chatsHistory[0].id);
+        }
+    });
+
+    // Segunda comprobación: si el CDN carga tarde (o falla), ajustamos el respaldo.
+    window.addEventListener('load', detectTailwind);
+
+    window.addEventListener('beforeunload', () => {
+        if ('speechSynthesis' in window) speechSynthesis.cancel();
+    });
+
+    // Chrome congela la síntesis de voz cuando la pestaña pasa a segundo plano y
+    // puede dejar el estado "Hablando…" congelado para siempre. Al volver, desatascamos.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            if (voiceActive && isSpeaking) {
+                stopSpeaking();
+                if (!micPaused && !isBusy) scheduleListen(300);
+                else if (!micPaused) scheduleListen(800);
+            }
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const help = document.getElementById('micHelpPanel');
+            if (help && !help.classList.contains('hidden')) { closeMicHelp(); return; }
+            if (!document.getElementById('settingsModal').classList.contains('hidden')) closeSettings();
+            else if (voiceActive) stopVoiceMode();
+        }
+    });
+
+    /* ============================ Historial ============================ */
+    function loadHistoryFromStorage() {
+        try {
+            const stored = localStorage.getItem('gemini_chats_history');
+            chatsHistory = stored ? JSON.parse(stored) : [];
+            if (!Array.isArray(chatsHistory)) chatsHistory = [];
+        } catch (e) {
+            console.error("Error reading history from localStorage", e);
+            chatsHistory = [];
+        }
+        renderHistorySidebar();
+    }
+
+    function saveHistoryToStorage() {
+        try {
+            localStorage.setItem('gemini_chats_history', JSON.stringify(chatsHistory));
+        } catch (e) {
+            console.error("Error saving history to localStorage", e);
+        }
+        renderHistorySidebar();
+    }
+
+    function haltSpeech() {
+        clearTimeout(listenTimer);
+        if (isSpeaking) stopSpeaking();
+        if (voiceActive && !micPaused) scheduleListen(200);
+        else if (voiceActive) setVoiceState('paused');
+    }
+
+    function createNewChat() {
+        const cur = chatsHistory.find(c => c.id === currentChatId);
+        if (cur && cur.messages.length === 0) {
+            haltSpeech();
+            renderCurrentChat();
+            renderHistorySidebar();
+            closeSidebarOnMobile();
+            return;
+        }
+        haltSpeech();
+        const newChat = {
+            id: 'chat_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            title: 'Nueva Conversación',
+            timestamp: new Date().toISOString(),
+            messages: []
+        };
+        chatsHistory.unshift(newChat);
+        currentChatId = newChat.id;
+        saveHistoryToStorage();
+        renderCurrentChat();
+        closeSidebarOnMobile();
+    }
+
+    function loadChatSession(id) {
+        if (id !== currentChatId) haltSpeech();
+        currentChatId = id;
+        renderCurrentChat();
+        renderHistorySidebar();
+        closeSidebarOnMobile();
+    }
+
+    function deleteChatSession(id, event) {
+        event.stopPropagation();
+        chatsHistory = chatsHistory.filter(c => c.id !== id);
+        saveHistoryToStorage();
+        if (currentChatId === id) {
+            if (chatsHistory.length > 0) {
+                loadChatSession(chatsHistory[0].id);
+            } else {
+                createNewChat();
+            }
+        }
+    }
+
+    function clearAllHistory() {
+        if (confirm("¿Estás seguro de que deseas borrar todo el historial de conversaciones?")) {
+            haltSpeech();
+            chatsHistory = [];
+            currentChatId = null;
+            try { localStorage.removeItem('gemini_chats_history'); } catch (e) {}
+            createNewChat();
+        }
+    }
+
+    function renderHistorySidebar() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = '';
+
+        chatsHistory.forEach(chat => {
+            const isActive = chat.id === currentChatId;
+            const btn = document.createElement('div');
+            btn.onclick = () => loadChatSession(chat.id);
+            btn.className = `group flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] transition-colors ${
+                isActive
+                ? 'bg-claude-raised text-claude-text font-medium'
+                : 'text-claude-text/85 hover:bg-claude-hover'
+            }`;
+
+            btn.innerHTML = `
+                <span class="truncate flex-1 pr-2">${escapeHtml(chat.title)}</span>
+                <button class="opacity-0 group-hover:opacity-100 hover:text-red-400 p-1 rounded transition-opacity shrink-0" title="Eliminar">✕</button>
+            `;
+            btn.querySelector('button').onclick = (ev) => deleteChatSession(chat.id, ev);
+            list.appendChild(btn);
+        });
+    }
+
+    function welcomeHtml() {
+        return `
+            <div class="flex-1 flex flex-col items-center justify-center text-center px-4 select-none">
+                <div class="w-11 h-11 rounded-xl bg-claude-accent text-white flex items-center justify-center text-[20px] mb-5 shadow-sm">✦</div>
+                <h1 class="font-serif-claude text-[27px] leading-tight font-semibold text-claude-text tracking-tight">¿En qué te puedo ayudar hoy?</h1>
+                <p class="text-[13.5px] text-claude-muted mt-3 max-w-md leading-relaxed">Escribime tu consulta, dictamela con el micrófono o activá el Modo Voz para conversar. Tu historial queda guardado en este dispositivo.</p>
+            </div>`;
+    }
+
+    function renderCurrentChat() {
+        const chat = chatsHistory.find(c => c.id === currentChatId);
+        document.getElementById('currentChatTitle').textContent = chat ? chat.title : 'Gemini Chatbot';
+        chatMessages.innerHTML = '';
+        liveEl = null;
+
+        if (!chat || chat.messages.length === 0) {
+            chatMessages.innerHTML = welcomeHtml();
+            return;
+        }
+
+        chat.messages.forEach(msg => {
+            if (msg.role === 'user') appendUserMessageUI(msg.text);
+            else if (msg.role === 'bot') appendBotMessageUI(msg.text, msg.sources || []);
+        });
+
+        scrollToBottom();
+    }
+
+    function saveMessageToChat(chatId, role, text, sources = []) {
+        const chat = chatsHistory.find(c => c.id === chatId);
+        if (!chat) return;
+        chat.messages.push({ role, text, sources, timestamp: new Date().toISOString() });
+        if (chat.title === 'Nueva Conversación' && role === 'user') {
+            chat.title = text.length > 28 ? text.substring(0, 28) + '...' : text;
+            if (chatId === currentChatId) document.getElementById('currentChatTitle').textContent = chat.title;
+        }
+        saveHistoryToStorage();
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('historySidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    function closeSidebarOnMobile() {
+        const sidebar = document.getElementById('historySidebar');
+        if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+    }
+
+    /* ============================ Ajustes UI ============================ */
+    function openSettings() {
+        systemPromptInput.value = customSystemPrompt;
+        autoTTSInput.checked = autoTTS;
+        if (apiKeyInput) apiKeyInput.value = API_KEY;
+        // Pausamos el micrófono para que el asistente no escuche lo que se tipea acá
+        if (voiceActive && !micPaused) {
+            settingsPausedMic = true;
+            toggleMicPause();
+        }
+        updateMicPermUI();
+        queryMicPermission();
+        refreshMicDevices();
+        const modal = document.getElementById('settingsModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeSettings() {
+        const modal = document.getElementById('settingsModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        stopMicTest();
+        if (settingsPausedMic) {
+            settingsPausedMic = false;
+            if (voiceActive && micPaused) toggleMicPause();
+        }
+    }
+
+    function saveSettings() {
+        customSystemPrompt = systemPromptInput.value.trim() || DEFAULT_SYSTEM_PROMPT;
+        autoTTS = autoTTSInput.checked;
+
+        if (apiKeyInput && apiKeyInput.value.trim()) {
+            API_KEY = apiKeyInput.value.trim();
+        }
+
+        storedVoiceName = voiceSelect.value || storedVoiceName;
+        persistSettings();
+        closeSettings();
+        showNotification("✓ Configuración guardada correctamente.");
+    }
+
+    function toggleJournalistMode() {
+        isJournalistMode = !isJournalistMode;
+        if (isJournalistMode) {
+            journalistBtn.classList.add('bg-claude-amber/10', 'text-claude-amber', 'border-claude-amber/50');
+            showNotification("✦ Modo Periodista Activado: Respuestas exhaustivas y estructuradas como informe.");
+        } else {
+            journalistBtn.classList.remove('bg-claude-amber/10', 'text-claude-amber', 'border-claude-amber/50');
+            showNotification("✦ Modo Periodista Desactivado: Modo asistente estándar.");
+        }
+    }
+
+    function showNotification(text) {
+        const notif = document.createElement('div');
+        notif.className = "text-center text-[13px] text-claude-text bg-claude-card border border-claude-border py-2.5 px-4 rounded-xl my-2 max-w-xl mx-auto shadow-sm transition-all";
+        notif.textContent = text;
+        chatMessages.appendChild(notif);
+        scrollToBottom();
+        setTimeout(() => notif.remove(), 4500);
+    }
+
+    /* ============================ Síntesis de voz (TTS) ============================ */
+    // Desbloquea el sintetizador dentro de un gesto de usuario (requisito en iOS/Safari
+    // y evita el estado "paused" fantasma de Chrome que silencia todo para siempre).
+    function primeSpeechSynthesis() {
+        if (!('speechSynthesis' in window) || ttsPrimed) return;
+        try {
+            const u = new SpeechSynthesisUtterance(' ');
+            u.volume = 0;
+            speechSynthesis.cancel();
+            speechSynthesis.speak(u);
+            ttsPrimed = true;
+        } catch (e) { console.warn('No se pudo desbloquear el TTS', e); }
+    }
+
+    // En móviles (Chrome Android / iOS) el sintetizador solo se desbloquea dentro de
+    // un gesto del usuario. Lo preparamos con el primer toque o tecla, así el TTS
+    // automático también funciona cuando la respuesta llega sin gesto inmediato.
+    function armTTSUnlock() {
+        const unlock = () => {
+            primeSpeechSynthesis();
+            window.removeEventListener('pointerdown', unlock, true);
+            window.removeEventListener('keydown', unlock, true);
+            window.removeEventListener('touchstart', unlock, true);
+        };
+        window.addEventListener('pointerdown', unlock, true);
+        window.addEventListener('keydown', unlock, true);
+        window.addEventListener('touchstart', unlock, true);
+    }
+
+    function populateVoices() {
+        if (!('speechSynthesis' in window)) return;
+        const voices = speechSynthesis.getVoices();
+        if (!voices.length) return;
+        const prev = voiceSelect.value || storedVoiceName;
+        voiceSelect.innerHTML = '';
+
+        const spanish = voices.filter(v => v.lang.toLowerCase().startsWith('es'));
+        const list = spanish.length ? spanish : voices;
+
+        list.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = `${voice.name} (${voice.lang})`;
+            voiceSelect.appendChild(option);
+        });
+
+        const names = list.map(v => v.name);
+        if (prev && names.includes(prev)) {
+            voiceSelect.value = prev;
+        } else {
+            const pref = ['es-ar', 'es-419', 'es-us', 'es-mx', 'es-es'];
+            let best = null;
+            for (const p of pref) {
+                best = list.find(v => v.lang.toLowerCase() === p);
+                if (best) break;
+            }
+            voiceSelect.value = (best || list[0]).name;
+        }
+    }
+
+    if ('speechSynthesis' in window) {
+        speechSynthesis.onvoiceschanged = populateVoices;
+        populateVoices();
+    }
+
+    function getSelectedVoice() {
+        if (!('speechSynthesis' in window)) return null;
+        const voices = speechSynthesis.getVoices();
+        const name = voiceSelect.value || storedVoiceName;
+        let v = name ? voices.find(x => x.name === name) : null;
+        if (!v) v = voices.find(x => /^es[-_](ar|419|us|mx)/i.test(x.lang)) || voices.find(x => x.lang.toLowerCase().startsWith('es'));
+        return v || null;
+    }
+
+    function cleanForSpeech(text) {
+        let t = String(text);
+        t = t.replace(/```[\s\S]*?```/g, ' ');
+        t = t.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1');
+        t = t.replace(/https?:\/\/\S+/g, '');
+        t = t.replace(/`([^`]*)`/g, '$1');
+        t = t.replace(/&amp;/g, ' y ').replace(/&lt;/g, ' menor que ')
+             .replace(/&gt;/g, ' mayor que ').replace(/&nbsp;/g, ' ');
+        t = t.replace(/[→⇒⟶➜➡]/g, ',');
+        t = t.split('\n').map(line => {
+            let l = line.trim();
+            if (!l) return '';
+            if (/^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l)) return '';
+            if (l.includes('|')) l = l.replace(/^\||\|$/g, '').split('|').map(c => c.trim()).filter(Boolean).join(', ');
+            l = l.replace(/^#{1,6}\s*/, '').replace(/^>\s?/, '').replace(/^[-*•]\s+/, '').replace(/^\d+[.)]\s+/, '');
+            l = l.replace(/[*_~#]/g, '');
+            if (l && !/[.!?…:;,]$/.test(l)) l += '.';
+            return l;
+        }).filter(Boolean).join(' ');
+        t = t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '');
+        return t.replace(/\s+/g, ' ').trim();
+    }
+
+    function chunkText(text, max = 190) {
+        // Protege los números decimales ("3.5") para que no se corten a la mitad
+        const DOT = '\u0001';
+        const safe = text.replace(/(\d)\.(\d)/g, '$1' + DOT + '$2');
+        const sentences = safe.match(/[^.!?…]+[.!?…]*\s*/g) || [safe];
+        const chunks = [];
+        let cur = '';
+        for (const s of sentences) {
+            if ((cur + s).length > max && cur) { chunks.push(cur.trim()); cur = ''; }
+            if (s.length > max) {
+                const words = s.split(' ');
+                for (const w of words) {
+                    if ((cur + ' ' + w).length > max && cur) { chunks.push(cur.trim()); cur = ''; }
+                    cur += (cur ? ' ' : '') + w;
+                }
+            } else {
+                cur += s;
+            }
+        }
+        if (cur.trim()) chunks.push(cur.trim());
+        return chunks.map(c => c.trim().split(DOT).join('.')).filter(Boolean);
+    }
+
+    function stopSpeaking() {
+        speakToken++;
+        isSpeaking = false;
+        currentUtterance = null;
+        if ('speechSynthesis' in window) {
+            try { speechSynthesis.cancel(); } catch (e) {}
+        }
+    }
+
+    function speak(text, onDone) {
+        if (!('speechSynthesis' in window)) { if (onDone) onDone(); return; }
+        const chunks = chunkText(cleanForSpeech(text));
+        if (!chunks.length) { if (onDone) onDone(); return; }
+
+        stopSpeaking();
+        const token = ++speakToken;
+        isSpeaking = true;
+        if (voiceActive) setVoiceState('speaking');
+        if (!speechSynthesis.getVoices().length) populateVoices();   // reintenta cargar voces
+        let idx = 0;
+
+        const finish = () => {
+            if (token !== speakToken) return;
+            isSpeaking = false;
+            currentUtterance = null;
+            if (onDone) onDone();
+        };
+
+        const next = () => {
+            if (token !== speakToken) return;
+            if (idx >= chunks.length) { finish(); return; }
+            const chunk = chunks[idx++];
+            const u = new SpeechSynthesisUtterance(chunk);
+            const v = getSelectedVoice();
+            if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = 'es-AR'; }
+            u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
+
+            let advanced = false;
+            let watchdog = null;
+            const advance = (cancelStuck) => {
+                if (advanced) return;
+                advanced = true;
+                if (watchdog) clearTimeout(watchdog);
+                // Si la utterance se colgó, la cancelamos para no solapar audio
+                if (cancelStuck) { try { speechSynthesis.cancel(); } catch (e) {} }
+                setTimeout(next, 80);   // pequeña espera tras cancel() (bug de Chrome)
+            };
+            // Si la síntesis se cuelga (bug conocido de Chrome), forzamos el avance
+            watchdog = setTimeout(() => advance(true), 8000 + chunk.length * 130);
+            u.onboundary = () => { boundaryKick = 1; };
+            u.onend = () => advance(false);
+            u.onerror = () => { if (token === speakToken) advance(false); };
+            currentUtterance = u;   // evita que el GC la elimine antes de onend
+            try {
+                // Bug de Chrome: si el sintetizador quedó en pausa, speak() suena a nada
+                if (speechSynthesis.paused) speechSynthesis.resume();
+                speechSynthesis.speak(u);
+            } catch (e) {
+                advance(false);
+            }
+        };
+
+        setTimeout(next, 80);   // pequeña espera tras cancel() (bug de Chrome)
+    }
+
+    /* ============================ Tema claro / oscuro ============================ */
+    const SUN_ICON = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1.5m0 15V21m9-9h-1.5M4.5 12H3m15.36-6.36l-1.06 1.06M6.7 17.3l-1.06 1.06m0-12.72L6.7 6.7m10.6 10.6l1.06 1.06M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>';
+    const MOON_ICON = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>';
+
+    function applyTheme(theme, save = true) {
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        if (save) { try { localStorage.setItem('gemini_theme', theme); } catch (e) {} }
+        themeRGBs = null;   // el orbe toma los colores nuevos
+        const btn = document.getElementById('themeBtn');
+        if (btn) btn.innerHTML = theme === 'dark' ? SUN_ICON : MOON_ICON;
+    }
+
+    function initThemeUI() {
+        applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light', false);
+    }
+
+    function toggleTheme() {
+        applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
+    }
+
+    // Colores del tema como [r,g,b] para el canvas del orbe (siempre actualizados)
+    function themeRGB(which) {
+        if (!themeRGBs) {
+            const cs = getComputedStyle(document.documentElement);
+            const grab = (name, fb) => {
+                const parts = (cs.getPropertyValue(name) || '').trim().split(/\s+/).map(Number);
+                return parts.length === 3 && parts.every(n => !isNaN(n)) ? parts : fb;
+            };
+            themeRGBs = {
+                acc: grab('--c-accent', [201, 100, 66]),
+                acch: grab('--c-accent-hover', [178, 84, 50]),
+                mut: grab('--c-muted', [112, 110, 101])
+            };
+        }
+        return themeRGBs[which];
+    }
+
+    function autoGrowTextarea() {
+        if (!userInput) return;
+        userInput.style.height = 'auto';
+        userInput.style.height = Math.min(userInput.scrollHeight, 200) + 'px';
+    }
+
+    /* ============================ Permisos del micrófono ============================ */
+    // Clave del arreglo: antes el reconocedor arrancaba sin pedir permiso y Chrome
+    // (sobre todo en archivos locales o vistas embebidas) lo rechazaba con
+    // "not-allowed" SIN mostrar nunca el cartel "Permitir". Ahora el permiso se
+    // pide SIEMPRE con getUserMedia dentro del gesto del usuario, que es la única
+    // vía confiable para que aparezca el diálogo del navegador.
+
+    function micSupported() {
+        return !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function');
+    }
+
+    async function queryMicPermission() {
+        if (!navigator.permissions || !navigator.permissions.query) return null;
+        try {
+            const st = await navigator.permissions.query({ name: 'microphone' });
+            micPermStatus = st;
+            applyPermState(st.state === 'granted' ? 'granted' : (st.state === 'denied' ? 'denied' : 'prompt'));
+            st.onchange = () => {
+                applyPermState(st.state === 'granted' ? 'granted' : (st.state === 'denied' ? 'denied' : 'prompt'));
+                if (st.state === 'granted') {
+                    showNotification("✓ Micrófono habilitado. ¡Listo para hablar!");
+                    refreshMicDevices();
+                }
+            };
+            return st.state;
+        } catch (e) {
+            return null;   // navegadores sin consulta de permisos: seguimos igual
+        }
+    }
+
+    function applyPermState(s) {
+        micPermState = s;
+        updateMicPermUI();
+    }
+
+    function updateMicPermUI() {
+        const MAP = {
+            granted: ['#22a06b', 'Permiso concedido ✓'],
+            denied: ['#e5484d', 'Bloqueado: revisá los permisos del navegador'],
+            prompt: ['', 'Falta conceder el permiso (lo pide el navegador)'],
+            requesting: ['', 'Esperando tu respuesta al navegador…'],
+            unavailable: ['#e5484d', 'No se detecta ningún micrófono'],
+            busy: ['#ea8a1e', 'El micrófono está siendo usado por otra app'],
+            unknown: ['', 'Sin verificar']
+        };
+        const entry = MAP[micPermState] || MAP.unknown;
+        if (micPermDot) micPermDot.style.background = entry[0] || 'rgb(var(--c-muted))';
+        if (micPermLabel) micPermLabel.textContent = entry[1];
+        if (micBtn) micBtn.title = 'Micrófono: ' + entry[1];
+    }
+
+    function maybeIframeHint() {
+        try {
+            if (window.self !== window.top && !iframeHintShown) {
+                iframeHintShown = true;
+                showNotification("⚠ Vista embebida: algunos navegadores bloquean el micrófono sin preguntar. Si no aparece el cartel de permiso, abrí el archivo directamente en una pestaña de Chrome.");
+            }
+        } catch (e) {}
+    }
+
+    function showMicRequesting(on) {
+        const ov = document.getElementById('micPermOverlay');
+        if (ov) ov.classList.toggle('show', !!on);
+    }
+
+    // Pide el permiso (mostrando el diálogo del navegador) y devuelve true si quedó concedido.
+    // Guarda de reentrada: si ya hay una petición en curso, devuelve la misma promesa
+    // (evita que dos toques seguidos abran dos diálogos o llamen a getUserMedia en paralelo).
+    let micPermPromise = null;
+    function ensureMicPermission() {
+        if (micPermPromise) return micPermPromise;
+        micPermPromise = requestMicPermission().finally(() => { micPermPromise = null; });
+        return micPermPromise;
+    }
+
+    async function requestMicPermission() {
+        if (!micSupported()) {
+            applyPermState('unknown');
+            showMicHelp('unsupported');
+            return false;
+        }
+        maybeIframeHint();
+        await queryMicPermission();
+        if (micPermState === 'granted') return true;
+        // En Android el estado cached de 'denied' puede estar desactualizado:
+        // forzamos getUserMedia para que el navegador muestre el diálogo
+        // de permiso en lugar de rendirnos sin preguntar.
+
+        applyPermState('requesting');
+        showMicRequesting(true);
+        let stream = null;
+        try {
+            const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+            if (selectedDeviceId) audio.deviceId = { exact: selectedDeviceId };
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio });
+            } catch (inner) {
+                if (inner && inner.name === 'OverconstrainedError' && selectedDeviceId) {
+                    // El dispositivo elegido ya no existe: reintentamos con el predeterminado
+                    selectedDeviceId = '';
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+                } else {
+                    throw inner;
+                }
+            }
+            micPermGrantedStream = stream;   // lo reutiliza el analizador del orbe
+            applyPermState('granted');
+            refreshMicDevices();
+            return true;
+        } catch (e) {
+            const n = (e && e.name) || '';
+            if (n === 'NotAllowedError' || n === 'SecurityError' || n === 'PermissionDeniedError') {
+                applyPermState('denied');
+                showMicHelp('denied');
+            } else if (n === 'NotFoundError' || n === 'DevicesNotFoundError' || n === 'OverconstrainedError') {
+                applyPermState('unavailable');
+                showMicHelp('unavailable');
+            } else if (n === 'NotReadableError' || n === 'TrackStartError') {
+                applyPermState('busy');
+                showMicHelp('busy');
+            } else {
+                applyPermState('unknown');
+                showMicHelp('generic');
+            }
+            return false;
+        } finally {
+            showMicRequesting(false);
+        }
+    }
+
+    function cancelMicRequest() { showMicRequesting(false); }
+
+    function retryMicPermission() {
+        closeMicHelp();
+        ensureMicPermission();
+    }
+
+    function closeMicHelp() {
+        const p = document.getElementById('micHelpPanel');
+        if (p) { p.classList.add('hidden'); p.classList.remove('flex'); }
+    }
+
+    function showMicHelp(kind) {
+        const C = {
+            denied: {
+                t: 'Micrófono bloqueado',
+                d: 'El navegador no muestra el cartel de permiso porque el acceso quedó bloqueado para esta página (o se abrió en una vista previa embebida).',
+                s: [
+                    '<b>En Android (Chrome):</b> tocá el ícono de <b>candado 🔒</b> junto a la dirección → <b>Permisos</b> → <b>Micrófono</b> → <b>Permitir</b>, y recargá.',
+                    '<b>En Android:</b> Ajustes del teléfono → <b>Apps → Chrome → Permisos → Micrófono → Permitir</b>.',
+                    'Hacé clic en el ícono de <b>candado 🔒 / cámara</b> a la izquierda de la barra de direcciones (en PC).',
+                    'Entrá a <b>Permisos del sitio</b> → <b>Micrófono</b> y elegí <b>Permitir</b>.',
+                    'Recargá la página y volvé a intentar.',
+                    'Alternativa (PC): abrí <b>chrome://settings/content/microphone</b>, sacá este sitio de la lista "Bloqueadas" y recargá.',
+                    'Si estás viendo esto dentro de una vista previa: <b>descargá el archivo</b> y abrilo directamente en Chrome.'
+                ]
+            },
+            unsupported: {
+                t: 'Navegador sin micrófono',
+                d: 'Este navegador no expone acceso al micrófono (getUserMedia).',
+                s: [
+                    'Usá <b>Google Chrome</b>, <b>Edge</b> o <b>Firefox</b> actualizado.',
+                    'Evitá el modo incógnito con permisos restringidos.'
+                ]
+            },
+            unavailable: {
+                t: 'No detectamos un micrófono',
+                d: 'El sistema no informó ningún dispositivo de entrada de audio.',
+                s: [
+                    'Conectá un micrófono (interno o externo) y probá de nuevo.',
+                    'Verificá que no esté deshabilitado en la configuración de sonido del sistema.',
+                    'En Windows: <b>Configuración → Privacidad y seguridad → Micrófono</b> → permití el acceso.',
+                    'Si usás un micrófono específico, elegilo en <b>Configuración → Micrófono</b>.'
+                ]
+            },
+            busy: {
+                t: 'Micrófono ocupado',
+                d: 'Otra aplicación está usando el micrófono en este momento.',
+                s: [
+                    'Cerrá apps como Meet, Zoom, Discord u otras pestañas que usen audio.',
+                    'Probá de nuevo en unos segundos con el botón <b>Reintentar</b>.'
+                ]
+            },
+            insecure: {
+                t: 'Contexto no seguro',
+                d: 'El navegador solo permite micrófono en páginas seguras (https, localhost o archivos locales abiertos con file://).',
+                s: [
+                    'Si servís el archivo, hacelo por <b>https</b> o en <b>localhost</b>.',
+                    'Si es un archivo local, abrilo directamente (doble clic → file://).'
+                ]
+            },
+            generic: {
+                t: 'No se pudo acceder al micrófono',
+                d: 'Ocurrió un error inesperado al solicitar el acceso.',
+                s: [
+                    'Probá de nuevo con el botón <b>Reintentar</b>.',
+                    'Revisá los permisos del sitio en el candado 🔒 de la barra de direcciones.',
+                    'Reiniciá el navegador si el problema continúa.'
+                ]
+            }
+        };
+        const c = C[kind] || C.generic;
+        const panel = document.getElementById('micHelpPanel');
+        if (!panel) { showNotification('⚠ ' + c.t); return; }
+        const icon = document.getElementById('micHelpIcon');
+        if (icon) {
+            icon.className = 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 ' +
+                (kind === 'denied' || kind === 'unavailable' ? 'bg-red-500/10 text-red-500' : 'bg-claude-accent/10 text-claude-accent');
+        }
+        document.getElementById('micHelpTitle').textContent = c.t;
+        document.getElementById('micHelpDesc').innerHTML = c.d;
+        document.getElementById('micHelpSteps').innerHTML = c.s.map(x => `<li>${x}</li>`).join('');
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+    }
+
+    /* ---- Dispositivos de entrada ---- */
+    async function refreshMicDevices() {
+        if (!micDeviceSelect || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+        try {
+            const devs = await navigator.mediaDevices.enumerateDevices();
+            const mics = devs.filter(d => d.kind === 'audioinput');
+            if (!mics.length) return;
+            const prev = selectedDeviceId;
+            micDeviceSelect.innerHTML = '';
+            mics.forEach((d, i) => {
+                const o = document.createElement('option');
+                o.value = d.deviceId || '';
+                o.textContent = d.label || ('Micrófono ' + (i + 1));
+                micDeviceSelect.appendChild(o);
+            });
+            if (prev && [...micDeviceSelect.options].some(o => o.value === prev)) micDeviceSelect.value = prev;
+            selectedDeviceId = micDeviceSelect.value || '';
+        } catch (e) {}
+    }
+
+    function restoreMicDevice() {
+        try { selectedDeviceId = localStorage.getItem('gemini_mic_device') || ''; } catch (e) {}
+        if (selectedDeviceId && micDeviceSelect) micDeviceSelect.value = selectedDeviceId;
+    }
+
+    function requestMicFromSettings() {
+        ensureMicPermission();
+    }
+
+    /* ---- Medidor de nivel (probar micrófono) ---- */
+    async function toggleMicTest() {
+        if (micTestStream) { stopMicTest(); return; }
+        const ok = await ensureMicPermission();
+        if (!ok) return;
+        try {
+            micTestStream = micPermGrantedStream || await navigator.mediaDevices.getUserMedia({ audio: true });
+            micPermGrantedStream = null;
+            micTestCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (micTestCtx.state === 'suspended') await micTestCtx.resume();
+            const src = micTestCtx.createMediaStreamSource(micTestStream);
+            micTestAnalyser = micTestCtx.createAnalyser();
+            micTestAnalyser.fftSize = 512;
+            micTestAnalyser.smoothingTimeConstant = 0.6;
+            src.connect(micTestAnalyser);
+            micTestData = new Uint8Array(micTestAnalyser.fftSize);
+            const btn = document.getElementById('micTestBtn');
+            if (btn) btn.textContent = 'Detener prueba';
+            const loop = () => {
+                if (!micTestStream || !micTestAnalyser) return;
+                micTestRAF = requestAnimationFrame(loop);
+                micTestAnalyser.getByteTimeDomainData(micTestData);
+                let sum = 0;
+                for (let i = 0; i < micTestData.length; i++) {
+                    const v = (micTestData[i] - 128) / 128;
+                    sum += v * v;
+                }
+                const lvl = Math.min(1, Math.sqrt(sum / micTestData.length) * 5);
+                const bar = document.getElementById('micTestBar');
+                if (bar) bar.style.width = Math.round(lvl * 100) + '%';
+            };
+            loop();
+        } catch (e) {
+            stopMicTest();
+        }
+    }
+
+    function stopMicTest() {
+        if (micTestRAF) { cancelAnimationFrame(micTestRAF); micTestRAF = null; }
+        try { if (micTestStream) micTestStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        try { if (micTestCtx) micTestCtx.close(); } catch (e) {}
+        micTestStream = null; micTestCtx = null; micTestAnalyser = null; micTestData = null;
+        const bar = document.getElementById('micTestBar');
+        if (bar) bar.style.width = '0%';
+        const btn = document.getElementById('micTestBtn');
+        if (btn) btn.textContent = 'Probar micrófono';
+    }
+
+    /* ============================ Reconocimiento de voz ============================ */
+    const SR_SUPPORTED = ('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window);
+    const SR = SR_SUPPORTED ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+
+    function clearRecWatchdogs() {
+        if (recStartWatchdog) { clearTimeout(recStartWatchdog); recStartWatchdog = null; }
+        if (recListenWatchdog) { clearTimeout(recListenWatchdog); recListenWatchdog = null; }
+    }
+
+    // Si la escucha queda congelada (sin resultados ni fin), la abortamos para relanzar.
+    function armListenWatchdog() {
+        if (recListenWatchdog) clearTimeout(recListenWatchdog);
+        recListenWatchdog = setTimeout(() => {
+            if (recRunning) {
+                console.warn('Reconocimiento congelado: abortando para relanzar');
+                try { recognition.abort(); } catch (e) {}
+            }
+        }, 15000);
+    }
+
+    function handleRepeatedRecFailure() {
+        recFailCount++;
+        if (recFailCount === 3 && SR_SUPPORTED) {
+            // Bug conocido de Chrome: tras muchos ciclos start/stop deja de emitir
+            // eventos. Recreamos el objeto desde cero.
+            try { recognition = buildRecognition(); } catch (e) {}
+        }
+        if (recFailCount >= 6) {
+            recFailCount = 0;
+            dictActive = false;
+            updateMicUI(false);
+            if (voiceActive) {
+                showNotification("⚠️ El reconocimiento de voz no responde. Se cerró el Modo Voz; probá activarlo de nuevo.");
+                stopVoiceMode();
+            } else {
+                showNotification("⚠️ El reconocimiento de voz no responde. Probá de nuevo en unos segundos.");
+            }
+            return false;
+        }
+        return true;
+    }
+
+    // Fábrica de reconocedores: permite recrear la instancia cuando Chrome se atasca.
+    function buildRecognition() {
+        if (!SR) return null;
+        const r = new SR();
+        r.continuous = false;
+        r.interimResults = true;
+        r.maxAlternatives = 1;
+        r.lang = 'es-AR';
+
+        r.onstart = () => {
+            recRunning = true;
+            clearRecWatchdogs();
+            armListenWatchdog();
+            if (recMode === 'dictate') updateMicUI(true);
+        };
+
+        r.onresult = (event) => {
+            armListenWatchdog();
+            let fin = '', interim = '';
+            for (let i = 0; i < event.results.length; i++) {
+                const res = event.results[i];
+                if (res.isFinal) fin += res[0].transcript;
+                else interim += res[0].transcript;
+            }
+            finalBuf = fin;
+            interimBuf = interim;
+            if (recMode === 'voice' && voiceActive) {
+                setLiveTranscript((fin + interim).trim());
+            } else if (recMode === 'dictate') {
+                userInput.value = dictBase + fin + interim;
+            }
+        };
+
+        r.onend = () => {
+            recRunning = false;
+            clearRecWatchdogs();
+            updateMicUI(false);
+            if (recMode === 'voice' && voiceActive) {
+                const text = (finalBuf + interimBuf).trim();
+                finalBuf = ''; interimBuf = '';
+                if (micPaused) { setVoiceState('paused'); return; }
+                if (voiceState === 'listening') {
+                    if (text) {
+                        recFailCount = 0;               // éxito: reseteamos el contador
+                        clearLiveTranscript();
+                        handleVoiceUtterance(text);
+                    } else {
+                        const delay = lastRecError === 'network' ? 1500 : 260;
+                        lastRecError = '';
+                        scheduleListen(delay);
+                    }
+                }
+            } else if (recMode === 'dictate' && dictActive) {
+                // Dictado continuo: se relanza solo hasta que el usuario lo corte
+                lastRecError = '';
+                setTimeout(() => { if (dictActive && !voiceActive) startRecognition('dictate'); }, 240);
+            }
+        };
+
+        r.onerror = (e) => {
+            const err = e.error || '';
+            lastRecError = err;
+            if (err === 'aborted' || err === 'no-speech') return;   // situaciones normales: onend decide
+            console.warn('Recognition error:', err);
+
+            if (err === 'not-allowed' || err === 'service-not-allowed') {
+                recFailCount = 0;
+                dictActive = false;
+                updateMicUI(false);
+                applyPermState('denied');
+                showMicHelp('denied');
+                if (voiceActive) stopVoiceMode();
+            } else if (err === 'audio-capture') {
+                if (!analyserBlocked) {
+                    // Puede ser un conflicto con el stream del orbe: lo soltamos y reintentamos
+                    analyserBlocked = true;
+                    releaseAudio();
+                    stopOrbLoop();
+                    if (voiceActive) startOrbLoop();   // el orbe sigue con animación simulada
+                    showNotification("🎙 Reajustando el micrófono…");
+                } else {
+                    dictActive = false;
+                    applyPermState('unavailable');
+                    showMicHelp('unavailable');
+                    if (voiceActive) stopVoiceMode();
+                }
+            } else if (err === 'network') {
+                showNotification("⚠️ Error de red en el reconocimiento de voz. Reintentando…");
+            } else if (err === 'language-not-supported') {
+                try { r.lang = 'es-ES'; } catch (e2) {}
+            }
+        };
+
+        return r;
+    }
+
+    if (SR_SUPPORTED) {
+        recognition = buildRecognition();
+    } else {
+        if (micBtn) micBtn.style.display = 'none';
+    }
+
+    function startRecognition(mode) {
+        if (!recognition && SR_SUPPORTED) {
+            try { recognition = buildRecognition(); } catch (e) {}
+        }
+        if (!recognition) return false;
+        recMode = mode;
+        if (recRunning) return true;
+        try {
+            finalBuf = ''; interimBuf = '';
+            recognition.start();
+            // Vigilancia de arranque: si en 4 s no llegó onstart, el reconocedor colgó
+            clearRecWatchdogs();
+            recStartWatchdog = setTimeout(() => {
+                if (!recRunning) {
+                    console.warn('recognition.start() sin respuesta: reintentando');
+                    try { recognition.abort(); } catch (e) {}
+                    if (voiceActive && recMode === 'voice' && !micPaused && !isBusy && !isSpeaking) {
+                        if (handleRepeatedRecFailure()) scheduleListen(500);
+                    } else if (recMode === 'dictate' && dictActive) {
+                        if (handleRepeatedRecFailure()) setTimeout(() => { if (dictActive && !voiceActive) startRecognition('dictate'); }, 500);
+                    }
+                }
+            }, 4000);
+            return true;
+        } catch (e) {
+            if (e.name === 'InvalidStateError') { recRunning = true; return true; }
+            console.warn('No se pudo iniciar el reconocimiento', e);
+            return false;
+        }
+    }
+
+    function updateMicUI(active) {
+        if (!micBtn) return;
+        if (active) micBtn.classList.add('animate-mic-pulse', 'text-claude-accent', 'bg-claude-accent/10');
+        else micBtn.classList.remove('animate-mic-pulse', 'text-claude-accent', 'bg-claude-accent/10');
+    }
+
+    // Dictado (botón del micrófono): pide el permiso primero (así el navegador muestra
+    // su cartel "Permitir") y después dicta en continuo hasta que se corta o se envía.
+    async function toggleMic() {
+        if (!recognition || voiceActive) return;
+        if (recRunning && recMode === 'dictate') {
+            dictActive = false;
+            try { recognition.stop(); } catch (e) {}
+            return;
+        }
+        if (userTogglingMic) return;   // evita dobles toques mientras se pide el permiso
+        userTogglingMic = true;
+        try {
+            const micOk = await ensureMicPermission();
+            if (!micOk) return;   // el panel de ayuda explica cómo desbloquearlo
+            dictActive = true;
+            dictBase = userInput.value ? userInput.value.replace(/\s*$/, ' ') : '';
+            startRecognition('dictate');
+        } finally {
+            userTogglingMic = false;
+        }
+    }
+
+    /* ============================ MODO VOZ ============================ */
+    const VOICE_LABELS = {
+        idle: 'Listo',
+        listening: 'Escuchando…',
+        thinking: 'Pensando…',
+        speaking: 'Hablando…',
+        paused: 'Micrófono en pausa'
+    };
+    const VOICE_DOT = {
+        idle: 'rgb(var(--c-muted))', listening: 'rgb(var(--c-accent))', thinking: 'rgb(var(--c-accent-hover))', speaking: 'rgb(var(--c-accent-hover))', paused: 'rgb(var(--c-muted))'
+    };
+
+    function setVoiceState(s) {
+        voiceState = s;
+        const label = document.getElementById('voiceStateLabel');
+        const dot = document.getElementById('voiceStateDot');
+        if (label) label.textContent = VOICE_LABELS[s] || '';
+        if (dot) dot.style.background = VOICE_DOT[s] || 'rgb(var(--c-muted))';
+        const pb = document.getElementById('pauseBtn');
+        if (pb) pb.textContent = micPaused ? '🎙 Reanudar mic' : '⏸ Pausar mic';
+    }
+
+    function updateVoiceButtonUI() {
+        const dot = document.getElementById('voiceStatusDot');
+        const label = document.getElementById('voiceStatusLabel');
+        const btn = document.getElementById('continuousVoiceBtn');
+        if (voiceActive) {
+            dot.className = "w-2 h-2 rounded-full bg-claude-amber animate-ping";
+            label.textContent = "Modo Voz: ON";
+            btn.classList.add('border-claude-amber/50', 'bg-claude-amber/10', 'text-claude-amber');
+        } else {
+            dot.className = "w-2 h-2 rounded-full bg-claude-muted";
+            label.textContent = "Modo Voz";
+            btn.classList.remove('border-claude-amber/50', 'bg-claude-amber/10', 'text-claude-amber');
+        }
+    }
+
+    function toggleContinuousVoice() {
+        if (voiceActive) stopVoiceMode();
+        else startVoiceMode();
+    }
+
+    async function startVoiceMode() {
+        if (voiceActive || startingVoice) return;
+        if (!SR_SUPPORTED) {
+            showNotification("⚠️ Tu navegador no soporta reconocimiento de voz. Usá Chrome o Edge.");
+            return;
+        }
+        startingVoice = true;
+        try {
+        // Desbloqueamos el TTS dentro del gesto del usuario (requisito en iOS/Safari
+        // y evita el estado "pausado fantasma" de Chrome).
+        primeSpeechSynthesis();
+
+        // Pedimos el permiso del micrófono ANTES de entrar en modo voz: el gesto del
+        // usuario es lo que habilita el cartel "Permitir" del navegador.
+        const micOk = await ensureMicPermission();
+        if (!micOk) return;   // el panel de ayuda ya explicó cómo desbloquearlo
+
+        if (recRunning) { try { recognition.abort(); } catch (e) {} }
+        stopSpeaking();
+
+        voiceActive = true;
+        micPaused = false;
+        recFailCount = 0;
+        document.body.classList.add('voice-on');
+        updateVoiceButtonUI();
+        setVoiceState('listening');
+        closeSidebarOnMobile();
+        resizeOrbCanvas();
+        scrollToBottom();
+        showNotification("🎙 Modo Voz activado. Decime algo…");
+
+        if (!analyserBlocked) await initAudioAnalyser();
+        if (!voiceActive) { releaseAudio(); return; }
+        startOrbLoop();
+        scheduleListen(120);
+        } finally {
+            startingVoice = false;
+        }
+    }
+
+    function stopVoiceMode() {
+        if (!voiceActive && !document.body.classList.contains('voice-on')) return;
+        voiceActive = false;
+        micPaused = false;
+        settingsPausedMic = false;
+        clearTimeout(listenTimer);
+        clearRecWatchdogs();
+        if (recRunning) { try { recognition.abort(); } catch (e) {} }
+        recRunning = false;
+        stopSpeaking();
+        if (currentAbort) { try { currentAbort.abort(); } catch (e) {} }
+        clearLiveTranscript();
+        stopOrbLoop();
+        releaseAudio();
+        document.body.classList.remove('voice-on');
+        setVoiceState('idle');
+        updateVoiceButtonUI();
+        // Dejamos un reconocedor fresco para la próxima activación
+        try { recognition = buildRecognition(); } catch (e) {}
+    }
+
+    function scheduleListen(delay = 250) {
+        clearTimeout(listenTimer);
+        listenTimer = setTimeout(() => {
+            if (!voiceActive) return;
+            if (micPaused) { setVoiceState('paused'); return; }
+            // Si todavía está pensando o hablando, reprograma en vez de abandonar
+            // (este abandono era la causa principal del Modo Voz "muerto").
+            if (isBusy || isSpeaking) { scheduleListen(300); return; }
+            setVoiceState('listening');
+            const ok = startRecognition('voice');
+            if (!ok) { if (handleRepeatedRecFailure()) scheduleListen(600 + recFailCount * 400); }
+        }, delay);
+    }
+
+    function toggleMicPause() {
+        if (!voiceActive) return;
+        if (micPaused) {
+            micPaused = false;
+            if (!isBusy && !isSpeaking) {
+                setVoiceState('listening');
+                scheduleListen(100);
+            } else {
+                setVoiceState(isSpeaking ? 'speaking' : 'thinking');
+            }
+        } else {
+            micPaused = true;
+            clearTimeout(listenTimer);
+            if (recRunning) { try { recognition.abort(); } catch (e) {} }
+            clearLiveTranscript();
+            setVoiceState(isSpeaking ? 'speaking' : (isBusy ? 'thinking' : 'paused'));
+        }
+        const pb = document.getElementById('pauseBtn');
+        if (pb) pb.textContent = micPaused ? '🎙 Reanudar mic' : '⏸ Pausar mic';
+    }
+
+    function interruptVoice() {
+        if (!voiceActive) return;
+        clearTimeout(listenTimer);
+        if (isSpeaking) {
+            stopSpeaking();
+            scheduleListen(120);
+        } else if (isBusy && currentAbort) {
+            try { currentAbort.abort(); } catch (e) {}   // afterResponse reanuda la escucha
+        } else if (!micPaused) {
+            scheduleListen(60);
+        }
+    }
+
+    function handleVoiceUtterance(text) {
+        submitMessage(text);
+    }
+
+    function afterResponse(botText) {
+        if (voiceActive) {
+            if (botText) {
+                // Margen final para que el eco del TTS no entre en el micrófono
+                speak(botText, () => {
+                    if (!voiceActive) return;
+                    if (micPaused) setVoiceState('paused');
+                    else scheduleListen(420);
+                });
+            } else if (micPaused) {
+                setVoiceState('paused');
+            } else {
+                scheduleListen(1000);
+            }
+        } else if (botText && autoTTS) {
+            speak(botText);
+        }
+    }
+
+    /* Transcripción en vivo */
+    function setLiveTranscript(text) {
+        if (!text) { clearLiveTranscript(); return; }
+        if (!liveEl || !liveEl.isConnected) {
+            liveEl = document.createElement('div');
+            liveEl.className = "flex justify-end gap-3 max-w-3xl ml-auto";
+            liveEl.innerHTML = `<div class="live-bubble user-bubble max-w-[80%] bg-claude-raised text-claude-text border border-claude-accent/40 text-[16px] leading-[1.6] px-4 py-3 rounded-[18px] whitespace-pre-wrap break-words"></div>`;
+            chatMessages.appendChild(liveEl);
+        }
+        liveEl.firstElementChild.textContent = text;
+        scrollToBottom();
+    }
+
+    function clearLiveTranscript() {
+        if (liveEl) { liveEl.remove(); liveEl = null; }
+    }
+
+    /* ============================ Audio (nivel del micrófono) ============================ */
+    let audioCtx = null, analyser = null, micStream = null, timeData = null;
+
+    async function initAudioAnalyser() {
+        // Si el permiso ya se pidió con getUserMedia (ensureMicPermission), reutilizamos
+        // ese mismo stream para el analizador del orbe: menos diálogos, menos conflictos.
+        if (micPermGrantedStream) {
+            micStream = micPermGrantedStream;
+            micPermGrantedStream = null;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+                const src = audioCtx.createMediaStreamSource(micStream);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.5;
+                src.connect(analyser);
+                timeData = new Uint8Array(analyser.fftSize);
+            } catch (e) {
+                analyser = null;
+            }
+            return;
+        }
+        if (micPermState === 'denied') return;   // sin permiso no insistimos: ya hay ayuda en pantalla
+        try {
+            const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+            if (selectedDeviceId) audio.deviceId = { exact: selectedDeviceId };
+            micStream = await navigator.mediaDevices.getUserMedia({ audio });
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            const src = audioCtx.createMediaStreamSource(micStream);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+            analyser.smoothingTimeConstant = 0.5;
+            src.connect(analyser);
+            timeData = new Uint8Array(analyser.fftSize);
+        } catch (e) {
+            console.warn('Sin analizador de audio (el orbe usará animación simulada):', e);
+            analyser = null;
+            // Micrófono tomado por otra app: no insistimos y avisamos con ayuda clara.
+            if (e && (e.name === 'NotReadableError' || e.name === 'TrackStartError')) {
+                analyserBlocked = true;
+                showMicHelp('busy');
+            } else if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+                applyPermState('denied');
+                showMicHelp('denied');
+            }
+        }
+    }
+
+    function releaseAudio() {
+        try { if (micStream) micStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        try { if (audioCtx) audioCtx.close(); } catch (e) {}
+        micStream = null; audioCtx = null; analyser = null; timeData = null;
+    }
+
+    function getMicLevel() {
+        if (!analyser) return -1;
+        analyser.getByteTimeDomainData(timeData);
+        let sum = 0;
+        for (let i = 0; i < timeData.length; i++) {
+            const v = (timeData[i] - 128) / 128;
+            sum += v * v;
+        }
+        return Math.min(1, Math.sqrt(sum / timeData.length) * 5);
+    }
+
+    /* ============================ Orbe flotante ============================ */
+    let orbRAF = null;
+    let orbLevel = 0;
+    const orbCtx = orbCanvas.getContext('2d');
+
+    function resizeOrbCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const w = window.innerWidth, h = window.innerHeight;
+        orbCanvas.width = Math.floor(w * dpr);
+        orbCanvas.height = Math.floor(h * dpr);
+        orbCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resizeOrbCanvas);
+
+    function startOrbLoop() {
+        stopOrbLoop();
+        resizeOrbCanvas();
+        orbRAF = requestAnimationFrame(orbFrame);
+    }
+
+    function stopOrbLoop() {
+        if (orbRAF) cancelAnimationFrame(orbRAF);
+        orbRAF = null;
+        orbLevel = 0;
+        orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
+    }
+
+    function orbFrame(ms) {
+        if (!voiceActive) { orbRAF = null; return; }
+        orbRAF = requestAnimationFrame(orbFrame);
+        const t = ms / 1000;
+
+        const ACC = themeRGB('acc'), ACCH = themeRGB('acch'), MUT = themeRGB('mut');
+        let target = 0.1;
+        let flicker = 1;
+        let color = ACC;
+
+        if (voiceState === 'listening') {
+            const m = getMicLevel();
+            target = m < 0 ? 0.15 + 0.1 * Math.sin(t * 2.2) : 0.07 + m * 0.95 + 0.03 * Math.sin(t * 2);
+        } else if (voiceState === 'thinking') {
+            target = 0.18 + 0.1 * Math.sin(t * 4);
+            flicker = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 9));
+            color = ACCH;
+        } else if (voiceState === 'speaking') {
+            boundaryKick *= 0.9;
+            target = 0.2 + 0.16 * Math.abs(Math.sin(t * 6.3)) + 0.08 * Math.sin(t * 11) + boundaryKick * 0.4;
+            color = ACC;
+        } else if (voiceState === 'paused') {
+            target = 0.03;
+            flicker = 0.5;
+            color = MUT;
+        }
+        target = Math.max(0, Math.min(1, target));
+        orbLevel += (target - orbLevel) * (target > orbLevel ? 0.35 : 0.08);
+
+        drawOrb(t, orbLevel, color, flicker);
+    }
+
+    function drawOrb(t, level, color, am) {
+        const w = window.innerWidth, h = window.innerHeight;
+        const ctx = orbCtx;
+        ctx.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const cy = h * 0.46;
+        const base = Math.max(70, Math.min(w, h) * 0.16);
+        const R = base * (1 + level * 0.5);
+        const [r, g, b] = color;
+
+        // Resplandor exterior
+        const glow = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 2.4);
+        glow.addColorStop(0, `rgba(${r},${g},${b},${0.18 * am})`);
+        glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 2.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Capas orgánicas
+        const N = 72;
+        for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            for (let i = 0; i <= N; i++) {
+                const a = (i / N) * Math.PI * 2;
+                const wob = Math.sin(a * (3 + k) + t * (1.2 + k * 0.7) + k) * 0.06
+                          + Math.sin(a * (5 + k) - t * (1.6 + k * 0.4)) * 0.04;
+                const rr = R * (1 - k * 0.07) * (1 + wob * (0.6 + level * 2.4));
+                const x = cx + Math.cos(a) * rr;
+                const y = cy + Math.sin(a) * rr;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            const fill = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 1.15);
+            fill.addColorStop(0, `rgba(${r},${g},${b},${0.05 * am})`);
+            fill.addColorStop(0.7, `rgba(${r},${g},${b},${(0.14 + 0.1 * level) * am})`);
+            fill.addColorStop(1, `rgba(${r},${g},${b},${0.30 * am})`);
+            ctx.fillStyle = fill;
+            ctx.fill();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = `rgba(${r},${g},${b},${(0.35 - k * 0.07) * am})`;
+            ctx.stroke();
+        }
+
+        // Núcleo
+        const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.55);
+        core.addColorStop(0, `rgba(255,240,210,${(0.16 + 0.12 * level) * am})`);
+        core.addColorStop(1, 'rgba(255,240,210,0)');
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    /* ============================ Envío de mensajes ============================ */
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text || isBusy) return;
+        if (recRunning && recMode === 'dictate') { dictActive = false; try { recognition.stop(); } catch (e) {} }
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        submitMessage(text);
+    }
+
+    function queryMightNeedSearch(query) {
+        const keywords = ['quien', 'quién', 'donde', 'dónde', 'cuando', 'cuándo', 'noticias', 'precio', 'hoy', 'clima', 'actual', 'que es', 'qué es', 'buscar', '2026', '2027', 'último', 'ultimo', 'ultimas'];
+        const lower = query.toLowerCase();
+        return keywords.some(k => lower.includes(k)) || query.length > 25;
+    }
+
+    function truncateText(str, length) {
+        return str.length > length ? str.substring(0, length) + '...' : str;
+    }
+
+    function buildContents(chatId) {
+        const chat = chatsHistory.find(c => c.id === chatId);
+        if (!chat) return [];
+        const msgs = chat.messages.slice(-24).map(m => ({
+            role: m.role === 'bot' ? 'model' : 'user',
+            text: m.text
+        }));
+        while (msgs.length && msgs[0].role !== 'user') msgs.shift();
+        const merged = [];
+        for (const m of msgs) {
+            const last = merged[merged.length - 1];
+            if (last && last.role === m.role) last.text += '\n\n' + m.text;
+            else merged.push({ ...m });
+        }
+        return merged.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
+    }
+
+    async function submitMessage(text) {
+        if (isBusy) return;
+        if (!API_KEY) {
+            openSettings();
+            showNotification("⚠️ Se requiere una clave API Key válida de Google Gemini para responder.");
+            if (voiceActive) stopVoiceMode();
+            return;
+        }
+
+        const chatId = currentChatId;
+        isBusy = true;
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+        if (voiceActive) setVoiceState('thinking');
+
+        appendUserMessageUI(text);
+        saveMessageToChat(chatId, 'user', text);
+
+        const statusBox = createAgentStatusBox();
+        chatMessages.appendChild(statusBox.element);
+        scrollToBottom();
+
+        currentAbort = new AbortController();
+        let botText = null;
+        let timedOut = false;
+        // Red de seguridad: si el servidor no responde en 45 s, cancelamos para que
+        // el Modo Voz nunca quede eternamente en "Pensando…".
+        const staleTimer = setTimeout(() => {
+            timedOut = true;
+            try { if (currentAbort) currentAbort.abort(); } catch (e) {}
+        }, 45000);
+
+        try {
+            statusBox.updateStatus(queryMightNeedSearch(text)
+                ? `Buscando información sobre "${truncateText(text, 30)}"...`
+                : 'Procesando respuesta...');
+
+            const payload = {
+                contents: buildContents(chatId),
+                systemInstruction: { parts: [{ text: getEffectiveSystemPrompt() }] },
+                tools: [{ google_search: {} }]
+            };
+
+            const response = await fetch(getApiUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: currentAbort.signal
+            });
+
+            let data = {};
+            try { data = await response.json(); } catch (e) { data = {}; }
+
+            statusBox.element.remove();
+
+            if (!response.ok) {
+                let errMsg = data.error?.message || `Error HTTP ${response.status}`;
+                if (response.status === 429 || /quota/i.test(errMsg)) {
+                    errMsg = "Se ha superado el límite de la cuota/frecuencia de tu API Key o la clave no está habilitada. Verifica tu API Key en AI Studio o intenta de nuevo en un momento.";
+                }
+                if (chatId === currentChatId) appendErrorMessage(errMsg);
+                if (voiceActive) botText = "Hubo un error con la API. " + cleanForSpeech(errMsg).slice(0, 140);
+            } else if (data.promptFeedback?.blockReason) {
+                if (chatId === currentChatId) appendErrorMessage(`La consulta fue bloqueada por los filtros de seguridad (${data.promptFeedback.blockReason}).`);
+                if (voiceActive) botText = "Tu consulta fue bloqueada por los filtros de seguridad. Probá formularla de otra manera.";
+            } else {
+                const candidate = data.candidates?.[0];
+                const parts = candidate?.content?.parts || [];
+                const answer = parts.filter(p => typeof p.text === 'string' && !p.thought).map(p => p.text).join('').trim();
+
+                if (answer) {
+                    let sources = [];
+                    try {
+                        const gm = candidate.groundingMetadata || {};
+                        const chunks = gm.groundingChunks || gm.groundingAttributions || [];
+                        sources = chunks
+                            .filter(c => c.web && c.web.uri)
+                            .map(c => ({ title: c.web.title || '', url: c.web.uri }));
+                    } catch (e) {
+                        console.warn("Error parsing sources:", e);
+                    }
+
+                    saveMessageToChat(chatId, 'bot', answer, sources);
+                    if (chatId === currentChatId) appendBotMessageUI(answer, sources);
+                    botText = answer;
+                } else {
+                    const reason = candidate?.finishReason ? ` (motivo: ${candidate.finishReason})` : '';
+                    if (chatId === currentChatId) appendErrorMessage('No se recibió texto en la respuesta devuelta' + reason + '.');
+                    if (voiceActive) botText = "No recibí texto en la respuesta. Probá preguntar de nuevo.";
+                }
+            }
+        } catch (error) {
+            statusBox.element.remove();
+            if (error.name === 'AbortError') {
+                if (timedOut && chatId === currentChatId) {
+                    appendErrorMessage("⏱ La respuesta tardó demasiado (45 s) y se canceló. Probá de nuevo.");
+                    if (voiceActive) botText = "La respuesta tardó demasiado. Probá de nuevo.";
+                }
+            } else {
+                console.error("Network / Execution Error:", error);
+                if (chatId === currentChatId) appendErrorMessage(`Error de conexión: ${error.message}`);
+                if (voiceActive) botText = "Hubo un error de conexión. Revisá tu internet y probá de nuevo.";
+            }
+        } finally {
+            clearTimeout(staleTimer);
+            isBusy = false;
+            currentAbort = null;
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+            if (!voiceActive) userInput.focus();
+            scrollToBottom();
+        }
+
+        afterResponse(botText);
+    }
+
+    /* ============================ UI de mensajes ============================ */
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendUserMessageUI(text) {
+        const container = document.createElement('div');
+        container.className = "flex justify-end gap-3 max-w-3xl ml-auto";
+        container.innerHTML = `
+            <div class="user-bubble max-w-[80%] bg-claude-raised text-claude-text text-[16px] leading-[1.6] px-4 py-3 rounded-[18px] whitespace-pre-wrap break-words">${escapeHtml(text)}</div>
+        `;
+        chatMessages.appendChild(container);
+        scrollToBottom();
+    }
+
+    function createAgentStatusBox() {
+        const el = document.createElement('div');
+        el.className = "flex gap-4 max-w-3xl";
+        el.innerHTML = `
+            <div class="w-7 h-7 rounded-lg bg-claude-accent text-white flex items-center justify-center shrink-0 font-bold text-[13px] mt-0.5 animate-amber-pulse">✦</div>
+            <div class="flex-1 pt-1">
+                <div class="font-serif-claude italic text-[14.5px] text-claude-muted statusLabel">Pensando…</div>
+            </div>
+        `;
+        return {
+            element: el,
+            updateStatus: (msg) => {
+                const label = el.querySelector('.statusLabel');
+                if (label) label.textContent = msg;
+            }
+        };
+    }
+
+    function sourceDomain(s) {
+        try {
+            const h = new URL(s.url).hostname.replace(/^www\./, '');
+            if (h.includes('vertexaisearch') || h.includes('googleapis')) return s.title || h;
+            return h;
+        } catch (e) {
+            return s.title || '';
+        }
+    }
+
+    function appendBotMessageUI(text, sources = []) {
+        const container = document.createElement('div');
+        container.className = "flex gap-4 max-w-3xl";
+
+        let sourcesHtml = '';
+        const valid = (sources || []).filter(s => s && /^https?:\/\//i.test(s.url || ''));
+        if (valid.length > 0) {
+            const seen = new Set();
+            const unique = valid.filter(s => !seen.has(s.url) && seen.add(s.url));
+
+            sourcesHtml = `
+                <div class="mt-4 pt-3 border-t border-claude-border/70">
+                    <div class="text-[12px] font-medium text-claude-muted mb-2">Fuentes</div>
+                    <div class="flex flex-col gap-1.5">
+                        ${unique.map(s => {
+                            const domain = sourceDomain(s);
+                            const displayTitle = s.title && s.title.trim() ? s.title : s.url;
+                            return `
+                                <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between hover:bg-claude-hover text-claude-text border border-claude-border px-3 py-1.5 rounded-lg transition-colors text-[12.5px] no-underline" style="text-decoration:none">
+                                    <div class="flex items-center gap-2 overflow-hidden pr-2">
+                                        <span class="text-claude-amber text-xs shrink-0">✦</span>
+                                        <span class="truncate font-medium group-hover:text-claude-amber transition-colors">${escapeHtml(displayTitle)}</span>
+                                    </div>
+                                    <span class="text-[10px] text-claude-muted shrink-0 font-mono bg-claude-card px-1.5 py-0.5 rounded border border-claude-border max-w-[40%] truncate">${escapeHtml(domain)}</span>
+                                </a>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        container.innerHTML = `
+            <div class="w-7 h-7 rounded-lg bg-claude-accent text-white flex items-center justify-center shrink-0 font-bold text-[13px] mt-0.5">✦</div>
+            <div class="flex-1 min-w-0 space-y-1.5 overflow-hidden">
+                <div class="text-[13px] font-medium text-claude-text">Gemini</div>
+                <div class="markdown-body font-serif-claude text-claude-text break-words">
+                    ${parseMarkdown(text)}
+                    ${sourcesHtml}
+                </div>
+            </div>
+        `;
+
+        chatMessages.appendChild(container);
+        scrollToBottom();
+    }
+
+    function appendErrorMessage(errorMsg) {
+        const container = document.createElement('div');
+        container.className = "flex gap-4 max-w-3xl";
+        container.innerHTML = `
+            <div class="w-7 h-7 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shrink-0 font-bold text-[13px] mt-0.5">⚠</div>
+            <div class="flex-1 space-y-1.5">
+                <div class="text-[13px] font-medium text-red-500">Error</div>
+                <div class="text-red-500/90 text-[13.5px] leading-relaxed bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">${escapeHtml(errorMsg)}</div>
+            </div>
+        `;
+        chatMessages.appendChild(container);
+        scrollToBottom();
+    }
+
+    /* ============================ Markdown ============================ */
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function inlineMd(s) {
+        const codes = [];
+        s = s.replace(/`([^`]+)`/g, (m, c) => { codes.push(c); return `\u0001${codes.length - 1}\u0001`; });
+        s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+        s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        s = s.replace(/\u0001(\d+)\u0001/g, (m, i) => `<code>${codes[i]}</code>`);
+        return s;
+    }
+
+    function parseMarkdown(src) {
+        const blocks = [];
+        let text = String(src).replace(/```[^\n`]*\n?([\s\S]*?)```/g, (m, code) => {
+            blocks.push(code.replace(/\n$/, ''));
+            return `\n\u0000${blocks.length - 1}\u0000\n`;
+        });
+        text = escapeHtml(text);
+
+        const lines = text.split('\n');
+        const out = [];
+        let para = [];
+        let list = null;
+
+        const flushPara = () => {
+            if (para.length) { out.push('<p>' + para.map(inlineMd).join('<br>') + '</p>'); para = []; }
+        };
+        const flushList = () => {
+            if (list) {
+                out.push(`<${list.type}>` + list.items.map(i => `<li>${inlineMd(i)}</li>`).join('') + `</${list.type}>`);
+                list = null;
+            }
+        };
+        const splitRow = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+        const isSep = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const t = line.trim();
+            let m;
+
+            if (!t) { flushPara(); flushList(); continue; }
+
+            if ((m = t.match(/^\u0000(\d+)\u0000$/))) {
+                flushPara(); flushList();
+                out.push(`<pre><code>${escapeHtml(blocks[m[1]])}</code></pre>`);
+                continue;
+            }
+
+            if (t.includes('|') && i + 1 < lines.length && isSep(lines[i + 1]) && !isSep(line)) {
+                flushPara(); flushList();
+                const head = splitRow(t);
+                let html = '<div class="overflow-x-auto"><table><thead><tr>' + head.map(c => `<th>${inlineMd(c)}</th>`).join('') + '</tr></thead><tbody>';
+                i += 2;
+                while (i < lines.length && lines[i].trim() && lines[i].includes('|')) {
+                    html += '<tr>' + splitRow(lines[i]).map(c => `<td>${inlineMd(c)}</td>`).join('') + '</tr>';
+                    i++;
+                }
+                i--;
+                html += '</tbody></table></div>';
+                out.push(html);
+                continue;
+            }
+
+            if ((m = t.match(/^(#{1,4})\s+(.*)$/))) {
+                flushPara(); flushList();
+                out.push(`<h${m[1].length}>${inlineMd(m[2])}</h${m[1].length}>`);
+                continue;
+            }
+
+            if (/^(-{3,}|\*{3,})$/.test(t)) { flushPara(); flushList(); out.push('<hr>'); continue; }
+
+            if ((m = t.match(/^&gt;\s?(.*)$/))) {
+                flushPara(); flushList();
+                out.push(`<blockquote>${inlineMd(m[1])}</blockquote>`);
+                continue;
+            }
+
+            if ((m = t.match(/^[-*•]\s+(.*)$/))) {
+                flushPara();
+                if (!list || list.type !== 'ul') { flushList(); list = { type: 'ul', items: [] }; }
+                list.items.push(m[1]);
+                continue;
+            }
+
+            if ((m = t.match(/^\d+[.)]\s+(.*)$/))) {
+                flushPara();
+                if (!list || list.type !== 'ol') { flushList(); list = { type: 'ol', items: [] }; }
+                list.items.push(m[1]);
+                continue;
+            }
+
+            flushList();
+            para.push(t);
+        }
+        flushPara(); flushList();
+        return out.join('');
+    }
+</script>
+</body>
+</html>

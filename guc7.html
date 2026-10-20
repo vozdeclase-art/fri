@@ -10,8 +10,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Chatbot Gemini</title>
     <script>
-        /* Tema antes del primer render (como claude.ai: sigue la preferencia del
-           sistema y después se puede cambiar a mano desde el encabezado). */
         (function () {
             try {
                 var saved = localStorage.getItem('gemini_theme');
@@ -25,13 +23,8 @@
     <script src="https://cdn.tailwindcss.com" onerror="window.__twFailed=true"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Tipografía tipo claude.ai: sans para la interfaz (Styrene B ≈ Inter) y
-         serif para el texto de las respuestas (Tiempos Text ≈ Source Serif 4) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
     <script>
-        /* Paleta tipo claude.ai con variables CSS: tema claro y oscuro reales.
-           Si el CDN de Tailwind no cargó (sin internet, bloqueado, o file://),
-           evitamos que este script rompa el resto de la página. */
         if (typeof tailwind === 'undefined') {
             window.tailwind = { config: {}, __missing: true };
         }
@@ -51,7 +44,6 @@
                             muted: 'rgb(var(--c-muted) / <alpha-value>)',
                             accent: 'rgb(var(--c-accent) / <alpha-value>)',
                             'accent-hover': 'rgb(var(--c-accent-hover) / <alpha-value>)',
-                            /* alias de compatibilidad con el JS existente (text-claude-amber, etc.) */
                             amber: {
                                 DEFAULT: 'rgb(var(--c-accent) / <alpha-value>)',
                                 hover: 'rgb(var(--c-accent-hover) / <alpha-value>)',
@@ -65,31 +57,30 @@
         }
     </script>
     <style>
-        /* ===== Paleta tipo claude.ai (claro: marfil cálido / oscuro: grafito cálido) ===== */
         :root {
-            --c-bg: 250 249 245;          /* #FAF9F5 área de chat */
-            --c-sidebar: 240 238 230;     /* #F0EEE6 crema */
-            --c-card: 255 255 255;        /* compositor / tarjetas */
-            --c-raised: 240 238 230;      /* burbuja del usuario */
+            --c-bg: 250 249 245;
+            --c-sidebar: 240 238 230;
+            --c-card: 255 255 255;
+            --c-raised: 240 238 230;
             --c-hover: 233 230 221;
             --c-border: 227 224 214;
-            --c-text: 31 30 29;           /* #1F1E1D */
+            --c-text: 31 30 29;
             --c-muted: 112 110 101;
-            --c-accent: 201 100 66;       /* #C96442 naranja Claude */
+            --c-accent: 201 100 66;
             --c-accent-hover: 178 84 50;
-            --code-bg: 31 30 29;          /* bloques de código oscuros como en claude.ai */
+            --code-bg: 31 30 29;
             --code-text: 240 238 230;
         }
         html.dark {
-            --c-bg: 38 38 36;             /* #262624 */
-            --c-sidebar: 31 30 29;        /* #1F1E1D */
-            --c-card: 48 48 46;           /* #30302E */
+            --c-bg: 38 38 36;
+            --c-sidebar: 31 30 29;
+            --c-card: 48 48 46;
             --c-raised: 47 46 43;
-            --c-hover: 61 61 58;          /* #3D3D3A */
+            --c-hover: 61 61 58;
             --c-border: 63 63 59;
-            --c-text: 240 238 230;        /* #F0EEE6 */
+            --c-text: 240 238 230;
             --c-muted: 157 154 146;
-            --c-accent: 217 119 87;       /* #D97757 */
+            --c-accent: 217 119 87;
             --c-accent-hover: 228 138 105;
             --code-bg: 26 26 24;
             --code-text: 240 238 230;
@@ -103,18 +94,15 @@
             font-size: 14px;
             letter-spacing: -0.006em;
             text-rendering: optimizeLegibility;
-            /* Móvil: evita el "zoom" al enfocar y respeta el notch/barra de gestos */
             -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
             overscroll-behavior: none;
         }
-        /* Altura real de la pantalla en móvil: dvh con fallback para Chrome antiguo */
         body { height: 100vh; height: 100dvh; }
-        /* Respeta las zonas seguras (notch, barra de gestos) en el header y el footer */
         #historySidebar { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
         header { padding-top: env(safe-area-inset-top, 0px); }
-        #textComposer, #voiceControls { margin-bottom: env(safe-area-inset-bottom, 0px); }
-        #footerNote { margin-bottom: calc(env(safe-area-inset-bottom, 0px)); }
-        /* Serif de las respuestas, como Tiempos Text en claude.ai */
+        #textComposer, #voiceControls { margin-bottom: 0; }
+        footer { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); }
         .font-serif-claude {
             font-family: 'Source Serif 4', 'Tiempos Text', Georgia, 'Times New Roman', serif;
             letter-spacing: 0;
@@ -127,11 +115,26 @@
         ::-webkit-scrollbar-thumb { background: rgb(var(--c-muted) / 0.35); border-radius: 8px; }
         ::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-muted) / 0.55); }
 
-        /* Columna de chat como flex para poder centrar la bienvenida */
-        #chatMessages { display: flex; flex-direction: column; }
+        #chatMessages { display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
         #chatMessages > * { flex-shrink: 0; }
 
-        /* Overlay: esperando el permiso del micrófono */
+        .user-row { width: 100%; }
+        .user-bubble {
+            word-break: normal;
+            overflow-wrap: anywhere;
+            hyphens: none;
+            width: fit-content;
+        }
+        .overflow-wrap-anywhere { overflow-wrap: anywhere; }
+
+        #historySidebar { will-change: margin-left, transform; }
+        @media (min-width: 1024px) {
+            body.sidebar-collapsed #historySidebar {
+                margin-left: -260px; width: 0; min-width: 0;
+                overflow: hidden; border-right-width: 0;
+            }
+        }
+
         #micPermOverlay {
             position: fixed; inset: 0; z-index: 70;
             display: none; align-items: center; justify-content: center;
@@ -152,7 +155,6 @@
         }
         .animate-mic-pulse { animation: micPulse 1.5s infinite; }
 
-        /* ===== Markdown (respuestas en serif 16px, como claude.ai) ===== */
         .markdown-body { font-size: 16px; line-height: 1.65; color: rgb(var(--c-text)); }
         .markdown-body p { margin-bottom: 0.75rem; }
         .markdown-body > *:first-child { margin-top: 0; }
@@ -224,14 +226,12 @@
         body.voice-on #chatMessages { padding-bottom: 7rem; }
         .live-bubble { border-style: dashed !important; font-style: italic; }
 
-        /* ===== Respaldo si el CDN de Tailwind no carga (sin internet / bloqueado) ===== */
         #twWarning { display: none; }
         html.tw-missing #twWarning {
             display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 200;
             background: #b91c1c; color: #fff; font: 13px/1.5 system-ui, sans-serif;
             padding: 8px 12px; text-align: center;
         }
-        /* Utilidades mínimas para que la app no quede rota sin Tailwind */
         html.tw-missing body { display: block; overflow: auto; height: auto; background: rgb(var(--c-bg)); color: rgb(var(--c-text)); }
         html.tw-missing #historySidebar { display: none; }
         html.tw-missing #chatMessages { padding: 16px; overflow: visible; }
@@ -245,13 +245,10 @@
 </head>
 <body class="h-[100dvh] w-screen flex overflow-hidden antialiased">
 
-<!-- Aviso si el CDN de Tailwind no cargó (sin internet) -->
 <div id="twWarning">⚠️ Sin conexión: no se pudieron cargar los estilos (Tailwind). La app funciona igual, pero se ve sin formato. Reconectate y recargá para verla bien.</div>
 
-<!-- Orbe de voz (flotante, translúcido, sobre el chat) -->
 <canvas id="orbCanvas" class="fixed inset-0 w-full h-full pointer-events-none z-10"></canvas>
 
-<!-- Overlay: esperando el permiso del micrófono -->
 <div id="micPermOverlay">
     <div class="bg-claude-card border border-claude-border rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 text-center space-y-4">
         <div class="mx-auto w-12 h-12 rounded-full bg-claude-accent/10 text-claude-accent flex items-center justify-center">
@@ -265,9 +262,8 @@
     </div>
 </div>
 
-<!-- Panel de ayuda del micrófono (bloqueado / sin micro / ocupado / inseguro) -->
 <div id="micHelpPanel" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-claude-card border border-claude-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="bg-claude-card border border-claude-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[92vh] overflow-y-auto">
         <div class="p-5 border-b border-claude-border flex items-start gap-3">
             <div id="micHelpIcon" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-500/10 text-red-500">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.66-3.88l-7-12a2 2 0 00-3.32 0l-7 12A2 2 0 005 19z"></path></svg>
@@ -285,14 +281,15 @@
     </div>
 </div>
 
-<!-- Barra lateral de historial -->
 <aside id="historySidebar" class="w-[260px] bg-claude-sidebar border-r border-claude-border flex flex-col h-full transition-all duration-300 z-30 fixed lg:relative -translate-x-full lg:translate-x-0">
     <div class="p-3 flex items-center gap-2">
         <button onclick="createNewChat()" class="flex-1 flex items-center gap-2 h-9 px-3 rounded-lg border border-claude-border hover:bg-claude-hover text-[13.5px] font-medium text-claude-text transition-colors">
             <svg class="w-4 h-4 text-claude-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             Nuevo chat
         </button>
-        <button onclick="toggleSidebar()" class="lg:hidden text-claude-muted hover:text-claude-text p-1.5">✕</button>
+        <button onclick="toggleSidebar()" title="Ocultar panel" class="text-claude-muted hover:text-claude-text p-1.5 rounded-lg hover:bg-claude-hover transition-colors" aria-label="Ocultar panel de historial">
+            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+        </button>
     </div>
 
     <div class="px-4 pt-1 pb-1 text-[12px] font-medium text-claude-muted">Recientes</div>
@@ -311,18 +308,20 @@
 <div class="flex-1 flex flex-col h-full min-w-0 bg-claude-bg">
     <div class="flex flex-col flex-1 h-full max-w-[48rem] mx-auto px-4 sm:px-6 w-full min-w-0">
 
-        <!-- Header (altura y densidad de claude.ai) -->
-        <header class="h-[52px] flex items-center justify-between shrink-0">
+        <header class="min-h-[52px] flex items-center justify-between shrink-0">
             <div class="flex items-center gap-2.5 min-w-0">
-                <button onclick="toggleSidebar()" class="lg:hidden text-claude-muted hover:text-claude-text p-1.5 rounded-lg hover:bg-claude-hover transition-colors">
+                <button onclick="toggleSidebar()" title="Mostrar/Ocultar panel" class="text-claude-muted hover:text-claude-text p-1.5 rounded-lg hover:bg-claude-hover transition-colors" aria-label="Mostrar u ocultar panel de historial">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 </button>
                 <div class="w-7 h-7 rounded-lg bg-claude-accent text-white flex items-center justify-center text-[14px] shrink-0">✦</div>
-                <span id="currentChatTitle" class="text-[13.5px] font-medium text-claude-text truncate max-w-[220px] sm:max-w-xs">Gemini Chatbot</span>
+                <span id="currentChatTitle" class="text-[13.5px] font-medium text-claude-text truncate max-w-[180px] sm:max-w-xs">Gemini Chatbot</span>
             </div>
 
             <div class="flex items-center gap-1">
                 <button id="themeBtn" onclick="toggleTheme()" class="p-2 rounded-lg text-claude-muted hover:text-claude-text hover:bg-claude-hover transition-colors" title="Cambiar tema claro/oscuro"></button>
+                <button id="installBtn" onclick="promptInstall()" class="hidden p-2 rounded-lg text-claude-muted hover:text-claude-text hover:bg-claude-hover transition-colors" title="Instalar como aplicación">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4"></path></svg>
+                </button>
                 <button id="settingsBtn" onclick="openSettings()" class="p-2 rounded-lg text-claude-muted hover:text-claude-text hover:bg-claude-hover transition-colors" title="Configuración">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -332,13 +331,11 @@
             </div>
         </header>
 
-        <!-- Mensajes -->
         <main id="chatMessages" class="flex-1 overflow-y-auto py-6 space-y-7 pr-1"></main>
 
-        <!-- Footer -->
-        <footer class="pb-4 pt-1 shrink-0 relative z-20">
-            <!-- Compositor de texto (estilo claude.ai) -->
+        <footer class="pt-1 shrink-0 relative z-20">
             <div id="textComposer" class="relative bg-claude-card border border-claude-border focus-within:border-claude-accent/60 rounded-[20px] pl-4 pr-3 pt-3 pb-2.5 shadow-sm transition-colors">
+                <div id="attachmentBar" class="hidden flex-wrap gap-2 mb-2"></div>
                 <textarea
                     id="userInput"
                     rows="1"
@@ -348,6 +345,16 @@
 
                 <div class="flex items-center justify-between mt-1">
                     <div class="flex items-center gap-0.5">
+                        <label for="fileInput" id="attachBtn" role="button" tabindex="0" title="Adjuntar archivo (texto, imagen o PDF)" aria-label="Adjuntar archivo"
+                               class="cursor-pointer text-claude-muted hover:text-claude-text p-2 rounded-lg hover:bg-claude-hover transition-colors flex items-center justify-center">
+                            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                            </svg>
+                        </label>
+                        <input type="file" id="fileInput" multiple
+                            style="position:absolute; left:-9999px; top:0; width:1px; height:1px; opacity:0;"
+                            accept=".txt,.md,.markdown,.csv,.json,.xml,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.rs,.go,.rb,.php,.sh,.yml,.yaml,.log,.ini,.sql,image/*,application/pdf">
+
                         <button id="journalistBtn" onclick="toggleJournalistMode()" class="text-claude-muted hover:text-claude-text p-2 rounded-lg hover:bg-claude-hover transition-colors flex items-center justify-center" title="Modo Periodista de Investigación">
                             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6m-6 4h4"></path>
@@ -356,7 +363,7 @@
 
                         <button id="continuousVoiceBtn" onclick="toggleContinuousVoice()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-claude-hover text-[12.5px] text-claude-muted transition-colors" title="Activar Modo Voz">
                             <span id="voiceStatusDot" class="w-2 h-2 rounded-full bg-claude-muted"></span>
-                            <span id="voiceStatusLabel" class="hidden sm:inline">Modo Voz</span>
+                            <span id="voiceStatusLabel">Modo Voz</span>
                         </button>
                     </div>
 
@@ -375,13 +382,12 @@
                 </div>
             </div>
 
-            <!-- Controles del Modo Voz -->
-            <div id="voiceControls" class="items-center justify-between gap-3 bg-claude-card border border-claude-border rounded-[20px] px-4 py-3 shadow-sm">
+            <div id="voiceControls" class="flex-wrap items-center justify-between gap-2 bg-claude-card border border-claude-border rounded-[20px] px-4 py-3 shadow-sm">
                 <div class="flex items-center gap-2.5 min-w-0">
                     <span id="voiceStateDot" class="w-2.5 h-2.5 rounded-full shrink-0" style="background:rgb(var(--c-accent))"></span>
                     <span id="voiceStateLabel" class="text-[13.5px] text-claude-text truncate">Escuchando…</span>
                 </div>
-                <div class="flex items-center gap-1.5 shrink-0">
+                <div class="flex flex-wrap items-center gap-1.5 shrink-0">
                     <button id="pauseBtn" onclick="toggleMicPause()" class="px-3 py-1.5 rounded-lg text-[12.5px] border border-claude-border hover:bg-claude-hover text-claude-text transition-colors">⏸ Pausar mic</button>
                     <button onclick="interruptVoice()" class="px-3 py-1.5 rounded-lg text-[12.5px] border border-claude-border hover:bg-claude-hover text-claude-text transition-colors" title="Cortar la respuesta y volver a escuchar">⏭ Interrumpir</button>
                     <button onclick="stopVoiceMode()" class="px-3 py-1.5 rounded-lg text-[12.5px] bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 transition-colors">✕ Terminar</button>
@@ -393,7 +399,6 @@
     </div>
 </div>
 
-<!-- Modal de Configuración -->
 <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
     <div class="bg-claude-card border border-claude-border w-full max-w-[520px] rounded-2xl shadow-2xl relative max-h-[92vh] overflow-y-auto">
         <div class="flex items-center justify-between px-5 py-4 border-b border-claude-border/80 sticky top-0 bg-claude-card z-10">
@@ -402,7 +407,6 @@
         </div>
 
         <div class="px-5 py-5 space-y-5">
-            <!-- Micrófono -->
             <div class="space-y-2">
                 <label class="block text-[13px] font-medium text-claude-text">Micrófono</label>
                 <div class="flex items-center gap-2 bg-claude-raised border border-claude-border rounded-xl px-3 py-2.5">
@@ -419,7 +423,7 @@
                         <div id="micTestBar" class="h-full bg-claude-accent rounded-full transition-[width] duration-75" style="width:0%"></div>
                     </div>
                 </div>
-                <p class="text-[11.5px] text-claude-muted leading-relaxed">Si quedó bloqueado: hacé clic en el candado 🔒 de la barra de direcciones → <b>Micrófono → Permitir</b>, recargá la página (F5) y volvé a probar.</p>
+                <p class="text-[11.5px] text-claude-muted leading-relaxed">Nota: el selector de micrófono se usa para la prueba y para pedir permiso. El reconocimiento de voz del navegador usa el micrófono predeterminado del sistema. Si quedó bloqueado: tocá el candado 🔒 de la barra de direcciones → <b>Micrófono → Permitir</b> y recargá.</p>
             </div>
 
             <div class="space-y-1.5 hidden">
@@ -466,10 +470,10 @@
 </div>
 
 <script>
-    let API_KEY = "AQ.Ab8RN6IlZ0Jr8B2UnCbMxpGu6jhvt-t89bTCMpdUUWAlqisDiw";
+    let API_KEY = GEMINI_API_KEY;
 
     function getApiUrl() {
-        return `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+        return `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(API_KEY)}`;
     }
 
     /* ============================ Referencias DOM ============================ */
@@ -503,9 +507,20 @@
         return p;
     }
 
+    /* ============================ Almacenamiento seguro ============================ */
+    function safeGetItem(key) {
+        try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSetItem(key, value) {
+        try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+    }
+    function safeRemoveItem(key) {
+        try { localStorage.removeItem(key); } catch (e) { }
+    }
+
     function loadSettings() {
         try {
-            const s = JSON.parse(localStorage.getItem('gemini_settings') || '{}');
+            const s = JSON.parse(safeGetItem('gemini_settings') || '{}');
             if (s.systemPrompt) customSystemPrompt = s.systemPrompt;
             if (typeof s.autoTTS === 'boolean') autoTTS = s.autoTTS;
             if (s.voiceName) storedVoiceName = s.voiceName;
@@ -513,13 +528,11 @@
     }
 
     function persistSettings() {
-        try {
-            localStorage.setItem('gemini_settings', JSON.stringify({
-                systemPrompt: customSystemPrompt,
-                autoTTS: autoTTS,
-                voiceName: voiceSelect.value || storedVoiceName
-            }));
-        } catch (e) { console.warn('Error guardando ajustes', e); }
+        safeSetItem('gemini_settings', JSON.stringify({
+            systemPrompt: customSystemPrompt,
+            autoTTS: autoTTS,
+            voiceName: voiceSelect.value || storedVoiceName
+        }));
     }
 
     /* ============================ Estado global ============================ */
@@ -532,13 +545,13 @@
     let recognition = null;
     let recRunning = false;
     let recMode = 'dictate';          // 'dictate' | 'voice'
-    let dictActive = false;           // dictado continuo activado por el usuario
+    let dictActive = false;
     let dictBase = '';
     let finalBuf = '';
     let interimBuf = '';
     let lastRecError = '';
     let voiceActive = false;
-    let startingVoice = false;        // guarda anti-doble-toque de "Modo Voz"
+    let startingVoice = false;
     let micPaused = false;
     let voiceState = 'idle';          // idle | listening | thinking | speaking | paused
     let listenTimer = null;
@@ -547,34 +560,108 @@
     let currentUtterance = null;
     let boundaryKick = 0;
     let liveEl = null;
-    let recFailCount = 0;             // fallos consecutivos del reconocedor
-    let recStartWatchdog = null;      // vigila start() colgado
-    let recListenWatchdog = null;     // vigila escucha congelada sin eventos
-    let analyserBlocked = false;      // getUserMedia falla de forma persistente
-    let userTogglingMic = false;      // guarda anti-doble-toque del botón de micrófono
-    let ttsPrimed = false;            // TTS ya desbloqueado con gesto de usuario
-    let settingsPausedMic = false;    // mic pausado automáticamente al abrir ajustes
+    let recFailCount = 0;
+    let networkErrCount = 0;
+    let recStartWatchdog = null;
+    let recListenWatchdog = null;
+    let silenceTimer = null;
+    let userTogglingMic = false;
+    let ttsPrimed = false;
+    let settingsPausedMic = false;
+    let lastSpeechAt = 0;
+    let wakeLock = null;
 
     /* Permisos y dispositivos de micrófono */
-    let micPermState = 'unknown';     // unknown | prompt | requesting | granted | denied | unavailable | busy
-    let micPermStatus = null;         // PermissionStatus (si el navegador lo expone)
-    let micPermGrantedStream = null;  // stream obtenido al pedir permiso (se reutiliza para el orbe)
-    let selectedDeviceId = '';        // micrófono elegido en Ajustes
+    let micPermState = 'unknown';
+    let micPermStatus = null;
+    let micEverGranted = false;
+    let selectedDeviceId = '';
     let micTestStream = null, micTestCtx = null, micTestAnalyser = null, micTestData = null, micTestRAF = null;
     let iframeHintShown = false;
-    let themeRGBs = null;             // cache de colores del tema para el orbe
+    let themeRGBs = null;
+    let voiceEchoGuardUntil = 0;
+
+    /* Archivos adjuntos */
+    let attachments = [];
+    let attachSeq = 0;
+
+    /* ============================ PWA (instalable) ============================ */
+    const PWA_ICON = 'data:image/svg+xml;base64,' + btoa(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">' +
+        '<rect width="512" height="512" rx="112" fill="#C96442"/>' +
+        '<text x="256" y="330" font-size="260" text-anchor="middle" fill="#fff">&#10022;</text></svg>'
+    );
+
+    function installPwaManifest() {
+        try {
+            if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+            if (document.querySelector('link[rel="manifest"]')) return;
+            installInlineManifest();
+        } catch (e) { console.warn('No se pudo instalar el manifest PWA', e); }
+    }
+
+    function installInlineManifest() {
+        try {
+            if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return;
+            const manifest = {
+                name: 'Chatbot Gemini', short_name: 'Gemini',
+                description: 'Asistente con voz, adjuntos e historial local.',
+                start_url: location.href.split('#')[0], scope: location.href.split('#')[0].replace(/[^/]*$/, ''),
+                display: 'standalone',
+                background_color: '#1F1E1D', theme_color: '#C96442', lang: 'es',
+                icons: [
+                    { src: PWA_ICON, sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+                    { src: PWA_ICON, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+                ]
+            };
+            const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = URL.createObjectURL(blob);
+            document.head.appendChild(link);
+        } catch (e) { console.warn('Manifest embebido no disponible', e); }
+    }
+
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        const btn = document.getElementById('installBtn');
+        if (btn) btn.classList.remove('hidden');
+    });
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        const btn = document.getElementById('installBtn');
+        if (btn) btn.classList.add('hidden');
+        showNotification('✓ App instalada. Ya podés abrirla desde tu pantalla de inicio.');
+    });
+
+    function promptInstall() {
+        if (!deferredInstallPrompt) {
+            showNotification('ℹ️ Para instalar: menú de Chrome (⋮) → "Añadir a pantalla de inicio".');
+            return;
+        }
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; });
+    }
 
     /* ============================ Init ============================ */
-    // Detecta si Tailwind no cargó y activa el modo de respaldo (la app sigue usable).
     function detectTailwind() {
         const missing = typeof tailwind === 'undefined' || !tailwind.config || tailwind.__missing === true;
         if (missing) document.documentElement.classList.add('tw-missing');
     }
 
+    function isFinePointer() {
+        try { return window.matchMedia('(pointer: fine)').matches; } catch (e) { return true; }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         detectTailwind();
+        installPwaManifest();
+        armTTSUnlock();
         loadSettings();
         loadHistoryFromStorage();
+        applySidebarState();
         initThemeUI();
         queryMicPermission();
         refreshMicDevices();
@@ -582,10 +669,30 @@
         if (micDeviceSelect) {
             micDeviceSelect.addEventListener('change', () => {
                 selectedDeviceId = micDeviceSelect.value || '';
-                try { localStorage.setItem('gemini_mic_device', selectedDeviceId); } catch (e) {}
+                safeSetItem('gemini_mic_device', selectedDeviceId);
             });
         }
         if (userInput) userInput.addEventListener('input', autoGrowTextarea);
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.addEventListener('change', async (e) => {
+                const files = e.target.files;
+                if (files && files.length) await handleFiles(files);
+                e.target.value = '';
+            });
+        }
+        if (userInput) {
+            userInput.addEventListener('paste', (e) => {
+                const items = (e.clipboardData && e.clipboardData.files) ? e.clipboardData.files : null;
+                if (items && items.length) { e.preventDefault(); handleFiles(items); }
+            });
+        }
+        const attachBtn = document.getElementById('attachBtn');
+        if (attachBtn) {
+            attachBtn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const fi = document.getElementById('fileInput'); if (fi) fi.click(); }
+            });
+        }
         if (chatsHistory.length === 0) {
             createNewChat();
         } else {
@@ -593,23 +700,19 @@
         }
     });
 
-    // Segunda comprobación: si el CDN carga tarde (o falla), ajustamos el respaldo.
     window.addEventListener('load', detectTailwind);
 
     window.addEventListener('beforeunload', () => {
         if ('speechSynthesis' in window) speechSynthesis.cancel();
+        releaseWakeLock();
     });
 
-    // Chrome congela la síntesis de voz cuando la pestaña pasa a segundo plano y
-    // puede dejar el estado "Hablando…" congelado para siempre. Al volver, desatascamos.
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            if (voiceActive && isSpeaking) {
-                stopSpeaking();
-                if (!micPaused && !isBusy) scheduleListen(300);
-                else if (!micPaused) scheduleListen(800);
-            }
-        }
+        if (document.visibilityState !== 'visible') return;
+        if (!voiceActive) return;
+        acquireWakeLock();
+        if (isSpeaking) stopSpeaking();
+        if (!micPaused && !isBusy) scheduleListen(350);
     });
 
     document.addEventListener('keydown', (e) => {
@@ -621,10 +724,23 @@
         }
     });
 
+    /* ============================ Wake Lock ============================ */
+    async function acquireWakeLock() {
+        try {
+            if (!('wakeLock' in navigator) || wakeLock) return;
+            wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => { wakeLock = null; });
+        } catch (e) { wakeLock = null; }
+    }
+    function releaseWakeLock() {
+        try { if (wakeLock) wakeLock.release(); } catch (e) {}
+        wakeLock = null;
+    }
+
     /* ============================ Historial ============================ */
     function loadHistoryFromStorage() {
         try {
-            const stored = localStorage.getItem('gemini_chats_history');
+            const stored = safeGetItem('gemini_chats_history');
             chatsHistory = stored ? JSON.parse(stored) : [];
             if (!Array.isArray(chatsHistory)) chatsHistory = [];
         } catch (e) {
@@ -634,11 +750,12 @@
         renderHistorySidebar();
     }
 
+    let storageWarned = false;
     function saveHistoryToStorage() {
-        try {
-            localStorage.setItem('gemini_chats_history', JSON.stringify(chatsHistory));
-        } catch (e) {
-            console.error("Error saving history to localStorage", e);
+        const ok = safeSetItem('gemini_chats_history', JSON.stringify(chatsHistory));
+        if (!ok && !storageWarned) {
+            storageWarned = true;
+            showNotification("⚠️ No se pudo guardar el historial (almacenamiento lleno o bloqueado). Borrá chats viejos para liberar espacio.");
         }
         renderHistorySidebar();
     }
@@ -699,7 +816,7 @@
             haltSpeech();
             chatsHistory = [];
             currentChatId = null;
-            try { localStorage.removeItem('gemini_chats_history'); } catch (e) {}
+            safeRemoveItem('gemini_chats_history');
             createNewChat();
         }
     }
@@ -720,7 +837,7 @@
 
             btn.innerHTML = `
                 <span class="truncate flex-1 pr-2">${escapeHtml(chat.title)}</span>
-                <button class="opacity-0 group-hover:opacity-100 hover:text-red-400 p-1 rounded transition-opacity shrink-0" title="Eliminar">✕</button>
+                <button class="opacity-60 lg:opacity-0 lg:group-hover:opacity-100 hover:text-red-400 p-1.5 rounded transition-opacity shrink-0" title="Eliminar" aria-label="Eliminar chat">✕</button>
             `;
             btn.querySelector('button').onclick = (ev) => deleteChatSession(chat.id, ev);
             list.appendChild(btn);
@@ -748,34 +865,64 @@
         }
 
         chat.messages.forEach(msg => {
-            if (msg.role === 'user') appendUserMessageUI(msg.text);
+            if (msg.role === 'user') appendUserMessageUI(msg.text, msg.files || []);
             else if (msg.role === 'bot') appendBotMessageUI(msg.text, msg.sources || []);
         });
 
         scrollToBottom();
     }
 
-    function saveMessageToChat(chatId, role, text, sources = []) {
+    function saveMessageToChat(chatId, role, text, sources = [], files = []) {
         const chat = chatsHistory.find(c => c.id === chatId);
         if (!chat) return;
-        chat.messages.push({ role, text, sources, timestamp: new Date().toISOString() });
+        const liteFiles = (files || []).map(f => ({
+            name: f.name, kind: f.kind, type: f.type, size: f.size,
+            text: f.kind === 'image' ? '' : (f.text || '').slice(0, 100000)
+        }));
+        chat.messages.push({ role, text, sources, files: liteFiles, timestamp: new Date().toISOString() });
         if (chat.title === 'Nueva Conversación' && role === 'user') {
-            chat.title = text.length > 28 ? text.substring(0, 28) + '...' : text;
+            const base = text && text.trim() ? text : (liteFiles[0] ? liteFiles[0].name : 'Conversación');
+            chat.title = base.length > 28 ? base.substring(0, 28) + '...' : base;
             if (chatId === currentChatId) document.getElementById('currentChatTitle').textContent = chat.title;
         }
         saveHistoryToStorage();
     }
 
+    /* ============================ Sidebar ============================ */
+    function isDesktop() { return window.innerWidth >= 1024; }
+
+    function applySidebarState() {
+        const sidebar = document.getElementById('historySidebar');
+        if (!sidebar) return;
+        if (isDesktop()) {
+            const collapsed = safeGetItem('gemini_sidebar_collapsed') === '1';
+            document.body.classList.toggle('sidebar-collapsed', collapsed);
+            sidebar.classList.remove('-translate-x-full');
+            document.getElementById('sidebarOverlay').classList.add('hidden');
+        } else {
+            document.body.classList.remove('sidebar-collapsed');
+            sidebar.classList.add('-translate-x-full');
+            document.getElementById('sidebarOverlay').classList.add('hidden');
+        }
+    }
+
     function toggleSidebar() {
         const sidebar = document.getElementById('historySidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        sidebar.classList.toggle('-translate-x-full');
-        overlay.classList.toggle('hidden');
+        if (isDesktop()) {
+            const collapsed = !document.body.classList.contains('sidebar-collapsed');
+            document.body.classList.toggle('sidebar-collapsed', collapsed);
+            safeSetItem('gemini_sidebar_collapsed', collapsed ? '1' : '0');
+        } else {
+            const hidden = sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden', hidden);
+        }
     }
 
     function closeSidebarOnMobile() {
+        if (isDesktop()) return;
         const sidebar = document.getElementById('historySidebar');
-        if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+        if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
     }
 
     /* ============================ Ajustes UI ============================ */
@@ -783,7 +930,6 @@
         systemPromptInput.value = customSystemPrompt;
         autoTTSInput.checked = autoTTS;
         if (apiKeyInput) apiKeyInput.value = API_KEY;
-        // Pausamos el micrófono para que el asistente no escuche lo que se tipea acá
         if (voiceActive && !micPaused) {
             settingsPausedMic = true;
             toggleMicPause();
@@ -841,9 +987,7 @@
         setTimeout(() => notif.remove(), 4500);
     }
 
-    /* ============================ Síntesis de voz (TTS) ============================ */
-    // Desbloquea el sintetizador dentro de un gesto de usuario (requisito en iOS/Safari
-    // y evita el estado "paused" fantasma de Chrome que silencia todo para siempre).
+    /* ============================ TTS ============================ */
     function primeSpeechSynthesis() {
         if (!('speechSynthesis' in window) || ttsPrimed) return;
         try {
@@ -855,20 +999,21 @@
         } catch (e) { console.warn('No se pudo desbloquear el TTS', e); }
     }
 
-    // En móviles (Chrome Android / iOS) el sintetizador solo se desbloquea dentro de
-    // un gesto del usuario. Lo preparamos con el primer toque o tecla, así el TTS
-    // automático también funciona cuando la respuesta llega sin gesto inmediato.
     function armTTSUnlock() {
         const unlock = () => {
             primeSpeechSynthesis();
             window.removeEventListener('pointerdown', unlock, true);
             window.removeEventListener('keydown', unlock, true);
             window.removeEventListener('touchstart', unlock, true);
+            window.removeEventListener('click', unlock, true);
         };
         window.addEventListener('pointerdown', unlock, true);
         window.addEventListener('keydown', unlock, true);
         window.addEventListener('touchstart', unlock, true);
+        window.addEventListener('click', unlock, true);
     }
+
+    function normLang(l) { return String(l || '').toLowerCase().replace('_', '-'); }
 
     function populateVoices() {
         if (!('speechSynthesis' in window)) return;
@@ -877,7 +1022,7 @@
         const prev = voiceSelect.value || storedVoiceName;
         voiceSelect.innerHTML = '';
 
-        const spanish = voices.filter(v => v.lang.toLowerCase().startsWith('es'));
+        const spanish = voices.filter(v => normLang(v.lang).startsWith('es'));
         const list = spanish.length ? spanish : voices;
 
         list.forEach(voice => {
@@ -894,7 +1039,7 @@
             const pref = ['es-ar', 'es-419', 'es-us', 'es-mx', 'es-es'];
             let best = null;
             for (const p of pref) {
-                best = list.find(v => v.lang.toLowerCase() === p);
+                best = list.find(v => normLang(v.lang) === p);
                 if (best) break;
             }
             voiceSelect.value = (best || list[0]).name;
@@ -904,6 +1049,7 @@
     if ('speechSynthesis' in window) {
         speechSynthesis.onvoiceschanged = populateVoices;
         populateVoices();
+        [400, 1200, 2500, 5000].forEach(ms => setTimeout(populateVoices, ms));
     }
 
     function getSelectedVoice() {
@@ -911,7 +1057,7 @@
         const voices = speechSynthesis.getVoices();
         const name = voiceSelect.value || storedVoiceName;
         let v = name ? voices.find(x => x.name === name) : null;
-        if (!v) v = voices.find(x => /^es[-_](ar|419|us|mx)/i.test(x.lang)) || voices.find(x => x.lang.toLowerCase().startsWith('es'));
+        if (!v) v = voices.find(x => /^es-(ar|419|us|mx)/.test(normLang(x.lang))) || voices.find(x => normLang(x.lang).startsWith('es'));
         return v || null;
     }
 
@@ -939,7 +1085,6 @@
     }
 
     function chunkText(text, max = 190) {
-        // Protege los números decimales ("3.5") para que no se corten a la mitad
         const DOT = '\u0001';
         const safe = text.replace(/(\d)\.(\d)/g, '$1' + DOT + '$2');
         const sentences = safe.match(/[^.!?…]+[.!?…]*\s*/g) || [safe];
@@ -965,6 +1110,7 @@
         speakToken++;
         isSpeaking = false;
         currentUtterance = null;
+        boundaryKick = 0;
         if ('speechSynthesis' in window) {
             try { speechSynthesis.cancel(); } catch (e) {}
         }
@@ -979,7 +1125,7 @@
         const token = ++speakToken;
         isSpeaking = true;
         if (voiceActive) setVoiceState('speaking');
-        if (!speechSynthesis.getVoices().length) populateVoices();   // reintenta cargar voces
+        if (!speechSynthesis.getVoices().length) populateVoices();
         let idx = 0;
 
         const finish = () => {
@@ -1004,18 +1150,15 @@
                 if (advanced) return;
                 advanced = true;
                 if (watchdog) clearTimeout(watchdog);
-                // Si la utterance se colgó, la cancelamos para no solapar audio
                 if (cancelStuck) { try { speechSynthesis.cancel(); } catch (e) {} }
-                setTimeout(next, 80);   // pequeña espera tras cancel() (bug de Chrome)
+                setTimeout(next, 80);
             };
-            // Si la síntesis se cuelga (bug conocido de Chrome), forzamos el avance
-            watchdog = setTimeout(() => advance(true), 8000 + chunk.length * 130);
+            watchdog = setTimeout(() => advance(true), 10000 + chunk.length * 150);
             u.onboundary = () => { boundaryKick = 1; };
             u.onend = () => advance(false);
             u.onerror = () => { if (token === speakToken) advance(false); };
-            currentUtterance = u;   // evita que el GC la elimine antes de onend
+            currentUtterance = u;
             try {
-                // Bug de Chrome: si el sintetizador quedó en pausa, speak() suena a nada
                 if (speechSynthesis.paused) speechSynthesis.resume();
                 speechSynthesis.speak(u);
             } catch (e) {
@@ -1023,17 +1166,17 @@
             }
         };
 
-        setTimeout(next, 80);   // pequeña espera tras cancel() (bug de Chrome)
+        setTimeout(next, 80);
     }
 
-    /* ============================ Tema claro / oscuro ============================ */
+    /* ============================ Tema ============================ */
     const SUN_ICON = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1.5m0 15V21m9-9h-1.5M4.5 12H3m15.36-6.36l-1.06 1.06M6.7 17.3l-1.06 1.06m0-12.72L6.7 6.7m10.6 10.6l1.06 1.06M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>';
     const MOON_ICON = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>';
 
     function applyTheme(theme, save = true) {
         document.documentElement.classList.toggle('dark', theme === 'dark');
-        if (save) { try { localStorage.setItem('gemini_theme', theme); } catch (e) {} }
-        themeRGBs = null;   // el orbe toma los colores nuevos
+        if (save) safeSetItem('gemini_theme', theme);
+        themeRGBs = null;
         const btn = document.getElementById('themeBtn');
         if (btn) btn.innerHTML = theme === 'dark' ? SUN_ICON : MOON_ICON;
     }
@@ -1046,7 +1189,6 @@
         applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
     }
 
-    // Colores del tema como [r,g,b] para el canvas del orbe (siempre actualizados)
     function themeRGB(which) {
         if (!themeRGBs) {
             const cs = getComputedStyle(document.documentElement);
@@ -1070,12 +1212,6 @@
     }
 
     /* ============================ Permisos del micrófono ============================ */
-    // Clave del arreglo: antes el reconocedor arrancaba sin pedir permiso y Chrome
-    // (sobre todo en archivos locales o vistas embebidas) lo rechazaba con
-    // "not-allowed" SIN mostrar nunca el cartel "Permitir". Ahora el permiso se
-    // pide SIEMPRE con getUserMedia dentro del gesto del usuario, que es la única
-    // vía confiable para que aparezca el diálogo del navegador.
-
     function micSupported() {
         return !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function');
     }
@@ -1085,17 +1221,28 @@
         try {
             const st = await navigator.permissions.query({ name: 'microphone' });
             micPermStatus = st;
-            applyPermState(st.state === 'granted' ? 'granted' : (st.state === 'denied' ? 'denied' : 'prompt'));
-            st.onchange = () => {
+            if (st.state === 'granted') micEverGranted = true;
+            if (!micEverGranted) {
                 applyPermState(st.state === 'granted' ? 'granted' : (st.state === 'denied' ? 'denied' : 'prompt'));
+            } else {
+                applyPermState('granted');
+            }
+            st.onchange = () => {
                 if (st.state === 'granted') {
+                    micEverGranted = true;
+                    applyPermState('granted');
                     showNotification("✓ Micrófono habilitado. ¡Listo para hablar!");
                     refreshMicDevices();
+                } else if (st.state === 'denied') {
+                    micEverGranted = false;
+                    applyPermState('denied');
+                } else if (!micEverGranted) {
+                    applyPermState('prompt');
                 }
             };
             return st.state;
         } catch (e) {
-            return null;   // navegadores sin consulta de permisos: seguimos igual
+            return null;
         }
     }
 
@@ -1134,11 +1281,9 @@
         if (ov) ov.classList.toggle('show', !!on);
     }
 
-    // Pide el permiso (mostrando el diálogo del navegador) y devuelve true si quedó concedido.
-    // Guarda de reentrada: si ya hay una petición en curso, devuelve la misma promesa
-    // (evita que dos toques seguidos abran dos diálogos o llamen a getUserMedia en paralelo).
     let micPermPromise = null;
     function ensureMicPermission() {
+        if (micEverGranted) { applyPermState('granted'); return Promise.resolve(true); }
         if (micPermPromise) return micPermPromise;
         micPermPromise = requestMicPermission().finally(() => { micPermPromise = null; });
         return micPermPromise;
@@ -1147,15 +1292,12 @@
     async function requestMicPermission() {
         if (!micSupported()) {
             applyPermState('unknown');
-            showMicHelp('unsupported');
+            showMicHelp(window.isSecureContext === false ? 'insecure' : 'unsupported');
             return false;
         }
         maybeIframeHint();
         await queryMicPermission();
-        if (micPermState === 'granted') return true;
-        // En Android el estado cached de 'denied' puede estar desactualizado:
-        // forzamos getUserMedia para que el navegador muestre el diálogo
-        // de permiso en lugar de rendirnos sin preguntar.
+        if (micPermState === 'granted') { micEverGranted = true; return true; }
 
         applyPermState('requesting');
         showMicRequesting(true);
@@ -1167,14 +1309,15 @@
                 stream = await navigator.mediaDevices.getUserMedia({ audio });
             } catch (inner) {
                 if (inner && inner.name === 'OverconstrainedError' && selectedDeviceId) {
-                    // El dispositivo elegido ya no existe: reintentamos con el predeterminado
                     selectedDeviceId = '';
                     stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
                 } else {
                     throw inner;
                 }
             }
-            micPermGrantedStream = stream;   // lo reutiliza el analizador del orbe
+            try { stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+            stream = null;
+            micEverGranted = true;
             applyPermState('granted');
             refreshMicDevices();
             return true;
@@ -1203,6 +1346,7 @@
 
     function retryMicPermission() {
         closeMicHelp();
+        micEverGranted = false;
         ensureMicPermission();
     }
 
@@ -1219,8 +1363,7 @@
                 s: [
                     '<b>En Android (Chrome):</b> tocá el ícono de <b>candado 🔒</b> junto a la dirección → <b>Permisos</b> → <b>Micrófono</b> → <b>Permitir</b>, y recargá.',
                     '<b>En Android:</b> Ajustes del teléfono → <b>Apps → Chrome → Permisos → Micrófono → Permitir</b>.',
-                    'Hacé clic en el ícono de <b>candado 🔒 / cámara</b> a la izquierda de la barra de direcciones (en PC).',
-                    'Entrá a <b>Permisos del sitio</b> → <b>Micrófono</b> y elegí <b>Permitir</b>.',
+                    '<b>En PC:</b> hacé clic en el ícono de <b>candado 🔒</b> a la izquierda de la barra de direcciones → <b>Micrófono → Permitir</b>.',
                     'Recargá la página y volvé a intentar.',
                     'Alternativa (PC): abrí <b>chrome://settings/content/microphone</b>, sacá este sitio de la lista "Bloqueadas" y recargá.',
                     'Si estás viendo esto dentro de una vista previa: <b>descargá el archivo</b> y abrilo directamente en Chrome.'
@@ -1230,7 +1373,7 @@
                 t: 'Navegador sin micrófono',
                 d: 'Este navegador no expone acceso al micrófono (getUserMedia).',
                 s: [
-                    'Usá <b>Google Chrome</b>, <b>Edge</b> o <b>Firefox</b> actualizado.',
+                    'Usá <b>Google Chrome</b> o <b>Edge</b> actualizado.',
                     'Evitá el modo incógnito con permisos restringidos.'
                 ]
             },
@@ -1260,6 +1403,15 @@
                     'Si es un archivo local, abrilo directamente (doble clic → file://).'
                 ]
             },
+            nospeech: {
+                t: 'Reconocimiento de voz no disponible',
+                d: 'Este navegador no incluye el servicio de reconocimiento de voz de Google (típico de Brave, Chromium sin Google, Firefox o modo privado).',
+                s: [
+                    'Usá <b>Google Chrome</b> o <b>Microsoft Edge</b> (en PC y Android).',
+                    'En iPhone/iPad usá <b>Safari</b> con Siri y dictado activados.',
+                    'Verificá que tengas conexión a internet: el reconocimiento de voz la necesita.'
+                ]
+            },
             generic: {
                 t: 'No se pudo acceder al micrófono',
                 d: 'Ocurrió un error inesperado al solicitar el acceso.',
@@ -1285,7 +1437,6 @@
         panel.classList.add('flex');
     }
 
-    /* ---- Dispositivos de entrada ---- */
     async function refreshMicDevices() {
         if (!micDeviceSelect || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
         try {
@@ -1306,7 +1457,7 @@
     }
 
     function restoreMicDevice() {
-        try { selectedDeviceId = localStorage.getItem('gemini_mic_device') || ''; } catch (e) {}
+        selectedDeviceId = safeGetItem('gemini_mic_device') || '';
         if (selectedDeviceId && micDeviceSelect) micDeviceSelect.value = selectedDeviceId;
     }
 
@@ -1314,14 +1465,14 @@
         ensureMicPermission();
     }
 
-    /* ---- Medidor de nivel (probar micrófono) ---- */
     async function toggleMicTest() {
         if (micTestStream) { stopMicTest(); return; }
+        if (voiceActive) { showNotification("ℹ️ Terminá el Modo Voz antes de probar el micrófono."); return; }
         const ok = await ensureMicPermission();
         if (!ok) return;
         try {
-            micTestStream = micPermGrantedStream || await navigator.mediaDevices.getUserMedia({ audio: true });
-            micPermGrantedStream = null;
+            const audio = selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true;
+            micTestStream = await navigator.mediaDevices.getUserMedia({ audio });
             micTestCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (micTestCtx.state === 'suspended') await micTestCtx.resume();
             const src = micTestCtx.createMediaStreamSource(micTestStream);
@@ -1369,9 +1520,9 @@
     function clearRecWatchdogs() {
         if (recStartWatchdog) { clearTimeout(recStartWatchdog); recStartWatchdog = null; }
         if (recListenWatchdog) { clearTimeout(recListenWatchdog); recListenWatchdog = null; }
+        if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
     }
 
-    // Si la escucha queda congelada (sin resultados ni fin), la abortamos para relanzar.
     function armListenWatchdog() {
         if (recListenWatchdog) clearTimeout(recListenWatchdog);
         recListenWatchdog = setTimeout(() => {
@@ -1379,17 +1530,37 @@
                 console.warn('Reconocimiento congelado: abortando para relanzar');
                 try { recognition.abort(); } catch (e) {}
             }
-        }, 15000);
+        }, 25000);
+    }
+
+    function armSilenceTimer(delay = 1800) {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => {
+            if (recRunning) {
+                try { recognition.stop(); } catch (e) {}
+            }
+        }, delay);
+    }
+
+    function detachRecognition(r) {
+        if (!r) return;
+        try { r.onstart = r.onresult = r.onend = r.onerror = null; } catch (e) {}
+        try { r.abort(); } catch (e) {}
+    }
+
+    function replaceRecognition() {
+        detachRecognition(recognition);
+        recRunning = false;
+        clearRecWatchdogs();
+        recognition = SR ? buildRecognition() : null;
     }
 
     function handleRepeatedRecFailure() {
         recFailCount++;
-        if (recFailCount === 3 && SR_SUPPORTED) {
-            // Bug conocido de Chrome: tras muchos ciclos start/stop deja de emitir
-            // eventos. Recreamos el objeto desde cero.
-            try { recognition = buildRecognition(); } catch (e) {}
+        if (recFailCount === 4 && SR_SUPPORTED) {
+            replaceRecognition();
         }
-        if (recFailCount >= 6) {
+        if (recFailCount >= 8) {
             recFailCount = 0;
             dictActive = false;
             updateMicUI(false);
@@ -1404,40 +1575,58 @@
         return true;
     }
 
-    // Fábrica de reconocedores: permite recrear la instancia cuando Chrome se atasca.
     function buildRecognition() {
         if (!SR) return null;
         const r = new SR();
-        r.continuous = false;
+        const stale = () => r !== recognition;
+
+        // continuous=true es más estable en Chrome PC y Android moderno (v110+).
+        // Con continuous=false, Android corta la sesión antes de entregar el final
+        // y provoca race conditions en onend.
+        r.continuous = true;
         r.interimResults = true;
         r.maxAlternatives = 1;
         r.lang = 'es-AR';
 
         r.onstart = () => {
+            if (stale()) return;
             recRunning = true;
+            recFailCount = 0;
             clearRecWatchdogs();
             armListenWatchdog();
+            // 12s para empezar a hablar: suficiente en Android donde onstart tarda.
+            armSilenceTimer(12000);
             if (recMode === 'dictate') updateMicUI(true);
         };
 
         r.onresult = (event) => {
+            if (stale()) return;
             armListenWatchdog();
             let fin = '', interim = '';
-            for (let i = 0; i < event.results.length; i++) {
+            for (let i = event.resultIndex; i < event.results.length; i++) {
                 const res = event.results[i];
                 if (res.isFinal) fin += res[0].transcript;
                 else interim += res[0].transcript;
             }
-            finalBuf = fin;
+            // Acumulamos finales en el buffer persistente de la sesión.
+            if (fin) finalBuf += fin;
             interimBuf = interim;
+
             if (recMode === 'voice' && voiceActive) {
-                setLiveTranscript((fin + interim).trim());
+                if (isSpeaking || Date.now() < voiceEchoGuardUntil) return;
+                const live = (finalBuf + interim).trim();
+                if (live) lastSpeechAt = Date.now();
+                setLiveTranscript(live);
+                if (live) armSilenceTimer(1800);
             } else if (recMode === 'dictate') {
-                userInput.value = dictBase + fin + interim;
+                userInput.value = dictBase + finalBuf + interim;
+                autoGrowTextarea();
+                if ((finalBuf + interim).trim()) armSilenceTimer(2400);
             }
         };
 
         r.onend = () => {
+            if (stale()) return;
             recRunning = false;
             clearRecWatchdogs();
             updateMicUI(false);
@@ -1446,52 +1635,83 @@
                 finalBuf = ''; interimBuf = '';
                 if (micPaused) { setVoiceState('paused'); return; }
                 if (voiceState === 'listening') {
+                    if (isSpeaking || Date.now() < voiceEchoGuardUntil) { scheduleListen(300); return; }
                     if (text) {
-                        recFailCount = 0;               // éxito: reseteamos el contador
+                        recFailCount = 0;
+                        networkErrCount = 0;
                         clearLiveTranscript();
                         handleVoiceUtterance(text);
                     } else {
-                        const delay = lastRecError === 'network' ? 1500 : 260;
+                        const delay = lastRecError === 'network' ? 1500 : 280;
                         lastRecError = '';
-                        scheduleListen(delay);
+                        if (recFailCount < 6) scheduleListen(delay);
+                        else handleRepeatedRecFailure();
                     }
                 }
             } else if (recMode === 'dictate' && dictActive) {
-                // Dictado continuo: se relanza solo hasta que el usuario lo corte
                 lastRecError = '';
-                setTimeout(() => { if (dictActive && !voiceActive) startRecognition('dictate'); }, 240);
+                dictBase = userInput.value ? userInput.value.replace(/\s*$/, ' ') : '';
+                finalBuf = ''; interimBuf = '';
+                setTimeout(() => { if (dictActive && !voiceActive) startRecognition('dictate'); }, 220);
             }
         };
 
         r.onerror = (e) => {
+            if (stale()) return;
             const err = e.error || '';
             lastRecError = err;
-            if (err === 'aborted' || err === 'no-speech') return;   // situaciones normales: onend decide
+            if (err === 'aborted' || err === 'no-speech') {
+                if (voiceActive && !micPaused && recMode === 'voice') {
+                    setTimeout(() => {
+                        if (voiceActive && !recRunning && !isBusy && !isSpeaking && voiceState === 'listening') {
+                            scheduleListen(280);
+                        }
+                    }, 320);
+                }
+                return;
+            }
             console.warn('Recognition error:', err);
 
             if (err === 'not-allowed' || err === 'service-not-allowed') {
+                if (micPermState === 'granted') {
+                    recFailCount++;
+                    updateMicUI(false);
+                    if (voiceActive && !micPaused && recFailCount < 5) { scheduleListen(900); return; }
+                }
                 recFailCount = 0;
                 dictActive = false;
                 updateMicUI(false);
-                applyPermState('denied');
-                showMicHelp('denied');
+                if (err === 'service-not-allowed') {
+                    showMicHelp('nospeech');
+                } else {
+                    applyPermState('denied');
+                    micEverGranted = false;
+                    showMicHelp('denied');
+                }
                 if (voiceActive) stopVoiceMode();
             } else if (err === 'audio-capture') {
-                if (!analyserBlocked) {
-                    // Puede ser un conflicto con el stream del orbe: lo soltamos y reintentamos
-                    analyserBlocked = true;
-                    releaseAudio();
-                    stopOrbLoop();
-                    if (voiceActive) startOrbLoop();   // el orbe sigue con animación simulada
-                    showNotification("🎙 Reajustando el micrófono…");
-                } else {
+                recFailCount++;
+                updateMicUI(false);
+                if (recFailCount >= 4) {
+                    recFailCount = 0;
                     dictActive = false;
                     applyPermState('unavailable');
                     showMicHelp('unavailable');
                     if (voiceActive) stopVoiceMode();
+                } else if (voiceActive && !micPaused) {
+                    scheduleListen(900);
                 }
             } else if (err === 'network') {
-                showNotification("⚠️ Error de red en el reconocimiento de voz. Reintentando…");
+                networkErrCount++;
+                if (networkErrCount >= 4) {
+                    networkErrCount = 0;
+                    dictActive = false;
+                    updateMicUI(false);
+                    showMicHelp('nospeech');
+                    if (voiceActive) stopVoiceMode();
+                } else {
+                    showNotification("⚠️ Error de red en el reconocimiento de voz. Reintentando…");
+                }
             } else if (err === 'language-not-supported') {
                 try { r.lang = 'es-ES'; } catch (e2) {}
             }
@@ -1506,6 +1726,20 @@
         if (micBtn) micBtn.style.display = 'none';
     }
 
+    function armStartWatchdog() {
+        clearRecWatchdogs();
+        recStartWatchdog = setTimeout(() => {
+            if (recRunning) return;
+            console.warn('recognition.start() sin respuesta: reintentando');
+            try { recognition.abort(); } catch (e) {}
+            if (voiceActive && recMode === 'voice' && !micPaused && !isBusy && !isSpeaking) {
+                if (handleRepeatedRecFailure()) scheduleListen(500);
+            } else if (recMode === 'dictate' && dictActive) {
+                if (handleRepeatedRecFailure()) setTimeout(() => { if (dictActive && !voiceActive) startRecognition('dictate'); }, 500);
+            }
+        }, 5000);
+    }
+
     function startRecognition(mode) {
         if (!recognition && SR_SUPPORTED) {
             try { recognition = buildRecognition(); } catch (e) {}
@@ -1516,22 +1750,22 @@
         try {
             finalBuf = ''; interimBuf = '';
             recognition.start();
-            // Vigilancia de arranque: si en 4 s no llegó onstart, el reconocedor colgó
-            clearRecWatchdogs();
-            recStartWatchdog = setTimeout(() => {
-                if (!recRunning) {
-                    console.warn('recognition.start() sin respuesta: reintentando');
-                    try { recognition.abort(); } catch (e) {}
-                    if (voiceActive && recMode === 'voice' && !micPaused && !isBusy && !isSpeaking) {
-                        if (handleRepeatedRecFailure()) scheduleListen(500);
-                    } else if (recMode === 'dictate' && dictActive) {
-                        if (handleRepeatedRecFailure()) setTimeout(() => { if (dictActive && !voiceActive) startRecognition('dictate'); }, 500);
-                    }
-                }
-            }, 4000);
+            armStartWatchdog();
             return true;
         } catch (e) {
-            if (e.name === 'InvalidStateError') { recRunning = true; return true; }
+            if (e && e.name === 'InvalidStateError') {
+                console.warn('Reconocedor en estado inválido: recreando instancia.');
+                replaceRecognition();
+                try {
+                    recMode = mode;
+                    recognition.start();
+                    armStartWatchdog();
+                    return true;
+                } catch (e3) {
+                    console.warn('Reintento de start() falló:', e3);
+                    return false;
+                }
+            }
             console.warn('No se pudo iniciar el reconocimiento', e);
             return false;
         }
@@ -1543,20 +1777,19 @@
         else micBtn.classList.remove('animate-mic-pulse', 'text-claude-accent', 'bg-claude-accent/10');
     }
 
-    // Dictado (botón del micrófono): pide el permiso primero (así el navegador muestra
-    // su cartel "Permitir") y después dicta en continuo hasta que se corta o se envía.
     async function toggleMic() {
         if (!recognition || voiceActive) return;
-        if (recRunning && recMode === 'dictate') {
+        if (dictActive || (recRunning && recMode === 'dictate')) {
             dictActive = false;
             try { recognition.stop(); } catch (e) {}
+            updateMicUI(false);
             return;
         }
-        if (userTogglingMic) return;   // evita dobles toques mientras se pide el permiso
+        if (userTogglingMic) return;
         userTogglingMic = true;
         try {
             const micOk = await ensureMicPermission();
-            if (!micOk) return;   // el panel de ayuda explica cómo desbloquearlo
+            if (!micOk) return;
             dictActive = true;
             dictBase = userInput.value ? userInput.value.replace(/\s*$/, ' ') : '';
             startRecognition('dictate');
@@ -1610,38 +1843,37 @@
     async function startVoiceMode() {
         if (voiceActive || startingVoice) return;
         if (!SR_SUPPORTED) {
-            showNotification("⚠️ Tu navegador no soporta reconocimiento de voz. Usá Chrome o Edge.");
+            showMicHelp('nospeech');
             return;
         }
         startingVoice = true;
         try {
-        // Desbloqueamos el TTS dentro del gesto del usuario (requisito en iOS/Safari
-        // y evita el estado "pausado fantasma" de Chrome).
-        primeSpeechSynthesis();
+            primeSpeechSynthesis();
+            stopMicTest();
+            if (dictActive) { dictActive = false; try { recognition.stop(); } catch (e) {} updateMicUI(false); }
 
-        // Pedimos el permiso del micrófono ANTES de entrar en modo voz: el gesto del
-        // usuario es lo que habilita el cartel "Permitir" del navegador.
-        const micOk = await ensureMicPermission();
-        if (!micOk) return;   // el panel de ayuda ya explicó cómo desbloquearlo
+            const micOk = await ensureMicPermission();
+            if (!micOk) return;
 
-        if (recRunning) { try { recognition.abort(); } catch (e) {} }
-        stopSpeaking();
+            replaceRecognition();
+            stopSpeaking();
 
-        voiceActive = true;
-        micPaused = false;
-        recFailCount = 0;
-        document.body.classList.add('voice-on');
-        updateVoiceButtonUI();
-        setVoiceState('listening');
-        closeSidebarOnMobile();
-        resizeOrbCanvas();
-        scrollToBottom();
-        showNotification("🎙 Modo Voz activado. Decime algo…");
+            voiceActive = true;
+            micPaused = false;
+            recFailCount = 0;
+            networkErrCount = 0;
+            voiceEchoGuardUntil = 0;
+            document.body.classList.add('voice-on');
+            updateVoiceButtonUI();
+            setVoiceState('listening');
+            closeSidebarOnMobile();
+            resizeOrbCanvas();
+            scrollToBottom();
+            acquireWakeLock();
+            showNotification("🎙 Modo Voz manos libres. Hablá con naturalidad; queda escuchando solo.");
 
-        if (!analyserBlocked) await initAudioAnalyser();
-        if (!voiceActive) { releaseAudio(); return; }
-        startOrbLoop();
-        scheduleListen(120);
+            startOrbLoop();
+            scheduleListen(150);
         } finally {
             startingVoice = false;
         }
@@ -1652,30 +1884,27 @@
         voiceActive = false;
         micPaused = false;
         settingsPausedMic = false;
+        voiceEchoGuardUntil = 0;
         clearTimeout(listenTimer);
         clearRecWatchdogs();
-        if (recRunning) { try { recognition.abort(); } catch (e) {} }
-        recRunning = false;
         stopSpeaking();
         if (currentAbort) { try { currentAbort.abort(); } catch (e) {} }
         clearLiveTranscript();
         stopOrbLoop();
-        releaseAudio();
+        releaseWakeLock();
         document.body.classList.remove('voice-on');
         setVoiceState('idle');
         updateVoiceButtonUI();
-        // Dejamos un reconocedor fresco para la próxima activación
-        try { recognition = buildRecognition(); } catch (e) {}
+        replaceRecognition();
     }
 
     function scheduleListen(delay = 250) {
         clearTimeout(listenTimer);
         listenTimer = setTimeout(() => {
             if (!voiceActive) return;
+            if (document.hidden) return;
             if (micPaused) { setVoiceState('paused'); return; }
-            // Si todavía está pensando o hablando, reprograma en vez de abandonar
-            // (este abandono era la causa principal del Modo Voz "muerto").
-            if (isBusy || isSpeaking) { scheduleListen(300); return; }
+            if (isBusy || isSpeaking || Date.now() < voiceEchoGuardUntil) { scheduleListen(300); return; }
             setVoiceState('listening');
             const ok = startRecognition('voice');
             if (!ok) { if (handleRepeatedRecFailure()) scheduleListen(600 + recFailCount * 400); }
@@ -1695,6 +1924,7 @@
         } else {
             micPaused = true;
             clearTimeout(listenTimer);
+            clearRecWatchdogs();
             if (recRunning) { try { recognition.abort(); } catch (e) {} }
             clearLiveTranscript();
             setVoiceState(isSpeaking ? 'speaking' : (isBusy ? 'thinking' : 'paused'));
@@ -1706,28 +1936,49 @@
     function interruptVoice() {
         if (!voiceActive) return;
         clearTimeout(listenTimer);
+        voiceEchoGuardUntil = 0;
         if (isSpeaking) {
             stopSpeaking();
-            scheduleListen(120);
+            if (!micPaused) scheduleListen(120); else setVoiceState('paused');
         } else if (isBusy && currentAbort) {
-            try { currentAbort.abort(); } catch (e) {}   // afterResponse reanuda la escucha
+            try { currentAbort.abort(); } catch (e) {}
         } else if (!micPaused) {
             scheduleListen(60);
         }
     }
 
     function handleVoiceUtterance(text) {
-        submitMessage(text);
+        const clean = String(text || '').replace(/\s+/g, ' ').trim();
+        if (!clean || clean.length < 2) { if (voiceActive && !micPaused) scheduleListen(200); return; }
+        const lower = clean.toLowerCase().replace(/[¡!.,¿?]/g, '').trim();
+        if (/^(cancelar|cancela|detente|deten|para|silencio|alto|basta)$/.test(lower)) {
+            showNotification("🎙 Modo Voz detenido.");
+            stopVoiceMode();
+            return;
+        }
+        if (/^(pausa|pausar)$/.test(lower)) {
+            if (!micPaused) toggleMicPause();
+            return;
+        }
+        if (/^(reanuda|reanudar|continua|continuar|seguir)$/.test(lower)) {
+            if (micPaused) toggleMicPause();
+            return;
+        }
+        submitMessage(clean, []);
     }
 
     function afterResponse(botText) {
         if (voiceActive) {
             if (botText) {
-                // Margen final para que el eco del TTS no entre en el micrófono
+                // En Android el TTS tarda en liberar el audio focus (~1.5s).
+                // 1600ms evita que el micrófono capture el final del TTS.
+                voiceEchoGuardUntil = Date.now() + 1600;
                 speak(botText, () => {
                     if (!voiceActive) return;
+                    // Extra 1200ms tras terminar TTS antes de reabrir el micrófono.
+                    voiceEchoGuardUntil = Date.now() + 1200;
                     if (micPaused) setVoiceState('paused');
-                    else scheduleListen(420);
+                    else scheduleListen(900);
                 });
             } else if (micPaused) {
                 setVoiceState('paused');
@@ -1739,13 +1990,12 @@
         }
     }
 
-    /* Transcripción en vivo */
     function setLiveTranscript(text) {
         if (!text) { clearLiveTranscript(); return; }
         if (!liveEl || !liveEl.isConnected) {
             liveEl = document.createElement('div');
-            liveEl.className = "flex justify-end gap-3 max-w-3xl ml-auto";
-            liveEl.innerHTML = `<div class="live-bubble user-bubble max-w-[80%] bg-claude-raised text-claude-text border border-claude-accent/40 text-[16px] leading-[1.6] px-4 py-3 rounded-[18px] whitespace-pre-wrap break-words"></div>`;
+            liveEl.className = "user-row flex justify-end gap-3 w-full";
+            liveEl.innerHTML = `<div class="live-bubble user-bubble min-w-0 max-w-[85%] bg-claude-raised text-claude-text border border-claude-accent/40 text-[16px] leading-[1.6] px-4 py-3 rounded-[18px] whitespace-pre-wrap break-words overflow-wrap-anywhere"></div>`;
             chatMessages.appendChild(liveEl);
         }
         liveEl.firstElementChild.textContent = text;
@@ -1756,79 +2006,13 @@
         if (liveEl) { liveEl.remove(); liveEl = null; }
     }
 
-    /* ============================ Audio (nivel del micrófono) ============================ */
-    let audioCtx = null, analyser = null, micStream = null, timeData = null;
-
-    async function initAudioAnalyser() {
-        // Si el permiso ya se pidió con getUserMedia (ensureMicPermission), reutilizamos
-        // ese mismo stream para el analizador del orbe: menos diálogos, menos conflictos.
-        if (micPermGrantedStream) {
-            micStream = micPermGrantedStream;
-            micPermGrantedStream = null;
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') await audioCtx.resume();
-                const src = audioCtx.createMediaStreamSource(micStream);
-                analyser = audioCtx.createAnalyser();
-                analyser.fftSize = 512;
-                analyser.smoothingTimeConstant = 0.5;
-                src.connect(analyser);
-                timeData = new Uint8Array(analyser.fftSize);
-            } catch (e) {
-                analyser = null;
-            }
-            return;
-        }
-        if (micPermState === 'denied') return;   // sin permiso no insistimos: ya hay ayuda en pantalla
-        try {
-            const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
-            if (selectedDeviceId) audio.deviceId = { exact: selectedDeviceId };
-            micStream = await navigator.mediaDevices.getUserMedia({ audio });
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') await audioCtx.resume();
-            const src = audioCtx.createMediaStreamSource(micStream);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 512;
-            analyser.smoothingTimeConstant = 0.5;
-            src.connect(analyser);
-            timeData = new Uint8Array(analyser.fftSize);
-        } catch (e) {
-            console.warn('Sin analizador de audio (el orbe usará animación simulada):', e);
-            analyser = null;
-            // Micrófono tomado por otra app: no insistimos y avisamos con ayuda clara.
-            if (e && (e.name === 'NotReadableError' || e.name === 'TrackStartError')) {
-                analyserBlocked = true;
-                showMicHelp('busy');
-            } else if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
-                applyPermState('denied');
-                showMicHelp('denied');
-            }
-        }
-    }
-
-    function releaseAudio() {
-        try { if (micStream) micStream.getTracks().forEach(t => t.stop()); } catch (e) {}
-        try { if (audioCtx) audioCtx.close(); } catch (e) {}
-        micStream = null; audioCtx = null; analyser = null; timeData = null;
-    }
-
-    function getMicLevel() {
-        if (!analyser) return -1;
-        analyser.getByteTimeDomainData(timeData);
-        let sum = 0;
-        for (let i = 0; i < timeData.length; i++) {
-            const v = (timeData[i] - 128) / 128;
-            sum += v * v;
-        }
-        return Math.min(1, Math.sqrt(sum / timeData.length) * 5);
-    }
-
     /* ============================ Orbe flotante ============================ */
     let orbRAF = null;
     let orbLevel = 0;
-    const orbCtx = orbCanvas.getContext('2d');
+    const orbCtx = orbCanvas ? orbCanvas.getContext('2d') : null;
 
     function resizeOrbCanvas() {
+        if (!orbCtx) return;
         const dpr = window.devicePixelRatio || 1;
         const w = window.innerWidth, h = window.innerHeight;
         orbCanvas.width = Math.floor(w * dpr);
@@ -1836,9 +2020,15 @@
         orbCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     window.addEventListener('resize', resizeOrbCanvas);
+    let _sidebarResizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(_sidebarResizeTimer);
+        _sidebarResizeTimer = setTimeout(applySidebarState, 150);
+    });
 
     function startOrbLoop() {
         stopOrbLoop();
+        if (!orbCtx) return;
         resizeOrbCanvas();
         orbRAF = requestAnimationFrame(orbFrame);
     }
@@ -1847,11 +2037,11 @@
         if (orbRAF) cancelAnimationFrame(orbRAF);
         orbRAF = null;
         orbLevel = 0;
-        orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
+        if (orbCtx) orbCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     }
 
     function orbFrame(ms) {
-        if (!voiceActive) { orbRAF = null; return; }
+        if (!voiceActive || !orbCtx) { orbRAF = null; return; }
         orbRAF = requestAnimationFrame(orbFrame);
         const t = ms / 1000;
 
@@ -1861,14 +2051,16 @@
         let color = ACC;
 
         if (voiceState === 'listening') {
-            const m = getMicLevel();
-            target = m < 0 ? 0.15 + 0.1 * Math.sin(t * 2.2) : 0.07 + m * 0.95 + 0.03 * Math.sin(t * 2);
+            const talking = Date.now() - lastSpeechAt < 600;
+            target = talking
+                ? 0.42 + 0.14 * Math.sin(t * 14) + 0.06 * Math.sin(t * 23)
+                : 0.12 + 0.05 * Math.sin(t * 2.2);
         } else if (voiceState === 'thinking') {
             target = 0.18 + 0.1 * Math.sin(t * 4);
             flicker = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 9));
             color = ACCH;
         } else if (voiceState === 'speaking') {
-            boundaryKick *= 0.9;
+            boundaryKick *= 0.88;
             target = 0.2 + 0.16 * Math.abs(Math.sin(t * 6.3)) + 0.08 * Math.sin(t * 11) + boundaryKick * 0.4;
             color = ACC;
         } else if (voiceState === 'paused') {
@@ -1888,12 +2080,11 @@
         ctx.clearRect(0, 0, w, h);
 
         const cx = w / 2;
-        const cy = h * 0.46;
-        const base = Math.max(70, Math.min(w, h) * 0.16);
+        const cy = h * 0.42;
+        const base = Math.max(60, Math.min(w, h) * 0.15);
         const R = base * (1 + level * 0.5);
         const [r, g, b] = color;
 
-        // Resplandor exterior
         const glow = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 2.4);
         glow.addColorStop(0, `rgba(${r},${g},${b},${0.18 * am})`);
         glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
@@ -1902,7 +2093,6 @@
         ctx.arc(cx, cy, R * 2.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Capas orgánicas
         const N = 72;
         for (let k = 0; k < 3; k++) {
             ctx.beginPath();
@@ -1927,7 +2117,6 @@
             ctx.stroke();
         }
 
-        // Núcleo
         const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.55);
         core.addColorStop(0, `rgba(255,240,210,${(0.16 + 0.12 * level) * am})`);
         core.addColorStop(1, 'rgba(255,240,210,0)');
@@ -1937,9 +2126,165 @@
         ctx.fill();
     }
 
+    /* ============================ Archivos adjuntos ============================ */
+    const TEXT_EXT = /\.(txt|md|markdown|csv|json|xml|html?|css|js|ts|jsx|tsx|py|java|c|cpp|h|hpp|rs|go|rb|php|sh|bash|yml|yaml|log|ini|cfg|conf|sql|env|toml)$/i;
+    const MAX_TEXT_BYTES = 1024 * 1024;
+    const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+    const MAX_FILES = 6;
+
+    function fileKind(file) {
+        if (file.type.startsWith('image/')) return 'image';
+        if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf';
+        if (TEXT_EXT.test(file.name) || file.type.startsWith('text/')) return 'text';
+        return 'unknown';
+    }
+
+    function humanSize(n) {
+        if (n < 1024) return n + ' B';
+        if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+        return (n / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function readFileAsText(file) {
+        return new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res(String(r.result || ''));
+            r.onerror = () => rej(r.error || new Error('No se pudo leer el archivo'));
+            r.readAsText(file);
+        });
+    }
+
+    function readFileAsDataURL(file) {
+        return new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res(String(r.result || ''));
+            r.onerror = () => rej(r.error || new Error('No se pudo leer la imagen'));
+            r.readAsDataURL(file);
+        });
+    }
+
+    async function loadPdfJs() {
+        if (window.pdfjsLib) return window.pdfjsLib;
+        const urls = [
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+            'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
+        ];
+        for (const u of urls) {
+            try {
+                await new Promise((res, rej) => {
+                    const s = document.createElement('script');
+                    const timer = setTimeout(() => rej(new Error('timeout')), 8000);
+                    s.src = u;
+                    s.onload = () => { clearTimeout(timer); res(); };
+                    s.onerror = () => { clearTimeout(timer); rej(new Error('cdn')); };
+                    document.head.appendChild(s);
+                });
+                if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    return window.pdfjsLib;
+                }
+            } catch (e) { }
+        }
+        return null;
+    }
+
+    async function extractPdfText(file) {
+        const pdfjs = await loadPdfJs();
+        if (!pdfjs) throw new Error('Sin conexión para leer el PDF');
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data: buf }).promise;
+        const maxPages = Math.min(pdf.numPages, 40);
+        let out = '';
+        for (let p = 1; p <= maxPages; p++) {
+            const page = await pdf.getPage(p);
+            const content = await page.getTextContent();
+            const line = content.items.map(it => it.str).join(' ');
+            out += `\n--- Página ${p} ---\n${line}`;
+            if (out.length > 300000) break;
+        }
+        if (pdf.numPages > maxPages) out += `\n\n(Se leyeron ${maxPages} de ${pdf.numPages} páginas.)`;
+        return out.trim();
+    }
+
+    async function handleFiles(fileList) {
+        const files = Array.from(fileList || []);
+        for (const file of files) {
+            if (attachments.length >= MAX_FILES) {
+                showNotification(`⚠️ Máximo ${MAX_FILES} archivos por mensaje.`);
+                break;
+            }
+            const kind = fileKind(file);
+            try {
+                if (kind === 'image') {
+                    if (file.size > MAX_IMAGE_BYTES) { showNotification(`⚠️ "${file.name}" supera 4 MB.`); continue; }
+                    const dataUrl = await readFileAsDataURL(file);
+                    attachments.push({ id: ++attachSeq, name: file.name, type: file.type || 'image/*', size: file.size, kind: 'image', dataUrl });
+                } else if (kind === 'text') {
+                    if (file.size > MAX_TEXT_BYTES) { showNotification(`⚠️ "${file.name}" supera 1 MB de texto.`); continue; }
+                    const text = await readFileAsText(file);
+                    attachments.push({ id: ++attachSeq, name: file.name, type: file.type || 'text/plain', size: file.size, kind: 'text', text });
+                } else if (kind === 'pdf') {
+                    const text = await extractPdfText(file);
+                    attachments.push({ id: ++attachSeq, name: file.name, type: 'application/pdf', size: file.size, kind: 'pdf', text });
+                } else {
+                    try {
+                        if (file.size > MAX_TEXT_BYTES) throw new Error('grande');
+                        const text = await readFileAsText(file);
+                        if (/[\u0000-\u0008\u000E-\u001F]/.test(text.slice(0, 2000))) throw new Error('binario');
+                        attachments.push({ id: ++attachSeq, name: file.name, type: file.type || 'text/plain', size: file.size, kind: 'text', text });
+                    } catch (e) {
+                        showNotification(`⚠️ No se puede procesar "${file.name}" (tipo no soportado).`);
+                    }
+                }
+            } catch (err) {
+                console.warn('Error adjuntando archivo', file.name, err);
+                showNotification(`⚠️ No se pudo procesar "${file.name}".`);
+            }
+        }
+        renderAttachments();
+        autoGrowTextarea();
+    }
+
+    function removeAttachment(id) {
+        attachments = attachments.filter(a => a.id !== id);
+        renderAttachments();
+    }
+
+    function clearAttachments() {
+        attachments = [];
+        renderAttachments();
+    }
+
+    function attachIcon(kind) {
+        if (kind === 'image') return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+        if (kind === 'pdf') return '<span class="text-[10px] font-bold">PDF</span>';
+        return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>';
+    }
+
+    function renderAttachments() {
+        const bar = document.getElementById('attachmentBar');
+        if (!bar) return;
+        if (!attachments.length) { bar.classList.add('hidden'); bar.classList.remove('flex'); bar.innerHTML = ''; return; }
+        bar.classList.remove('hidden');
+        bar.classList.add('flex');
+        bar.innerHTML = attachments.map(a => `
+            <div class="relative flex items-center gap-2 bg-claude-raised border border-claude-border rounded-xl pl-2 pr-7 py-1.5 max-w-[220px]">
+                ${a.kind === 'image'
+                    ? `<img src="${a.dataUrl}" alt="" class="w-8 h-8 rounded-md object-cover shrink-0">`
+                    : `<span class="w-8 h-8 rounded-md bg-claude-card border border-claude-border flex items-center justify-center text-claude-muted shrink-0">${attachIcon(a.kind)}</span>`}
+                <div class="min-w-0">
+                    <div class="text-[12px] text-claude-text truncate" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</div>
+                    <div class="text-[10.5px] text-claude-muted">${humanSize(a.size)}</div>
+                </div>
+                <button onclick="removeAttachment(${a.id})" title="Quitar" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-claude-card border border-claude-border text-claude-muted hover:text-red-400 flex items-center justify-center text-[11px]">✕</button>
+            </div>
+        `).join('');
+    }
+
     /* ============================ Envío de mensajes ============================ */
     userInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && isFinePointer()) {
             e.preventDefault();
             sendMessage();
         }
@@ -1947,11 +2292,18 @@
 
     function sendMessage() {
         const text = userInput.value.trim();
-        if (!text || isBusy) return;
-        if (recRunning && recMode === 'dictate') { dictActive = false; try { recognition.stop(); } catch (e) {} }
+        const hasFiles = attachments.length > 0;
+        if ((!text && !hasFiles) || isBusy) return;
+        if (dictActive || (recRunning && recMode === 'dictate')) {
+            dictActive = false;
+            try { recognition.stop(); } catch (e) {}
+            updateMicUI(false);
+        }
         userInput.value = '';
         userInput.style.height = 'auto';
-        submitMessage(text);
+        const files = attachments.slice();
+        clearAttachments();
+        submitMessage(text, files);
     }
 
     function queryMightNeedSearch(query) {
@@ -1964,25 +2316,67 @@
         return str.length > length ? str.substring(0, length) + '...' : str;
     }
 
-    function buildContents(chatId) {
+    function buildContents(chatId, liveFiles) {
         const chat = chatsHistory.find(c => c.id === chatId);
         if (!chat) return [];
-        const msgs = chat.messages.slice(-24).map(m => ({
+        const slice = chat.messages.slice(-24);
+        const msgs = slice.map((m, i) => ({
             role: m.role === 'bot' ? 'model' : 'user',
-            text: m.text
+            text: m.text,
+            files: (i === slice.length - 1 && m.role === 'user' && liveFiles && liveFiles.length) ? liveFiles : (m.files || [])
         }));
         while (msgs.length && msgs[0].role !== 'user') msgs.shift();
         const merged = [];
         for (const m of msgs) {
             const last = merged[merged.length - 1];
-            if (last && last.role === m.role) last.text += '\n\n' + m.text;
-            else merged.push({ ...m });
+            if (last && last.role === m.role) {
+                last.text += '\n\n' + m.text;
+                last.files = (last.files || []).concat(m.files || []);
+            } else {
+                merged.push({ role: m.role, text: m.text, files: m.files || [] });
+            }
         }
-        return merged.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
+        return merged.map(m => {
+            const parts = [];
+            const docText = (m.files || []).filter(f => f.kind !== 'image' && f.text)
+                .map(f => `[Archivo adjunto: ${f.name}]\n${f.text.slice(0, 200000)}`).join('\n\n');
+            const fullText = [docText, m.text].filter(Boolean).join('\n\n');
+            if (fullText) parts.push({ text: fullText });
+            (m.files || []).filter(f => f.kind === 'image' && f.dataUrl).forEach(f => {
+                const comma = f.dataUrl.indexOf(',');
+                const mime = f.dataUrl.slice(5, f.dataUrl.indexOf(';'));
+                const b64 = f.dataUrl.slice(comma + 1);
+                parts.push({ inlineData: { mimeType: mime || f.type || 'image/png', data: b64 } });
+            });
+            if (!parts.length) parts.push({ text: ' ' });
+            return { role: m.role, parts };
+        });
     }
 
-    async function submitMessage(text) {
-        if (isBusy) return;
+    async function callGemini(payload, signal) {
+        let result = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const response = await fetch(getApiUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal
+            });
+            let data = {};
+            try { data = await response.json(); } catch (e) { data = {}; }
+            result = { response, data };
+            if (response.ok || ![500, 502, 503, 504].includes(response.status) || attempt === 2) break;
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        }
+        return result;
+    }
+
+    async function submitMessage(text, files = []) {
+        if (isBusy) {
+            if (voiceActive && !micPaused) scheduleListen(500);
+            return;
+        }
         if (!API_KEY) {
             openSettings();
             showNotification("⚠️ Se requiere una clave API Key válida de Google Gemini para responder.");
@@ -1992,12 +2386,12 @@
 
         const chatId = currentChatId;
         isBusy = true;
-        userInput.disabled = true;
         sendBtn.disabled = true;
+        if (isSpeaking && !voiceActive) stopSpeaking();
         if (voiceActive) setVoiceState('thinking');
 
-        appendUserMessageUI(text);
-        saveMessageToChat(chatId, 'user', text);
+        appendUserMessageUI(text, files);
+        saveMessageToChat(chatId, 'user', text, [], files);
 
         const statusBox = createAgentStatusBox();
         chatMessages.appendChild(statusBox.element);
@@ -2006,12 +2400,10 @@
         currentAbort = new AbortController();
         let botText = null;
         let timedOut = false;
-        // Red de seguridad: si el servidor no responde en 45 s, cancelamos para que
-        // el Modo Voz nunca quede eternamente en "Pensando…".
         const staleTimer = setTimeout(() => {
             timedOut = true;
             try { if (currentAbort) currentAbort.abort(); } catch (e) {}
-        }, 45000);
+        }, 60000);
 
         try {
             statusBox.updateStatus(queryMightNeedSearch(text)
@@ -2019,36 +2411,28 @@
                 : 'Procesando respuesta...');
 
             const payload = {
-                contents: buildContents(chatId),
+                contents: buildContents(chatId, files),
                 systemInstruction: { parts: [{ text: getEffectiveSystemPrompt() }] },
                 tools: [{ google_search: {} }]
             };
 
-            const response = await fetch(getApiUrl(), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: currentAbort.signal
-            });
-
-            let data = {};
-            try { data = await response.json(); } catch (e) { data = {}; }
+            const { response, data } = await callGemini(payload, currentAbort.signal);
 
             statusBox.element.remove();
 
             if (!response.ok) {
-                let errMsg = data.error?.message || `Error HTTP ${response.status}`;
+                let errMsg = (data.error && data.error.message) || `Error HTTP ${response.status}`;
                 if (response.status === 429 || /quota/i.test(errMsg)) {
                     errMsg = "Se ha superado el límite de la cuota/frecuencia de tu API Key o la clave no está habilitada. Verifica tu API Key en AI Studio o intenta de nuevo en un momento.";
                 }
                 if (chatId === currentChatId) appendErrorMessage(errMsg);
                 if (voiceActive) botText = "Hubo un error con la API. " + cleanForSpeech(errMsg).slice(0, 140);
-            } else if (data.promptFeedback?.blockReason) {
+            } else if (data.promptFeedback && data.promptFeedback.blockReason) {
                 if (chatId === currentChatId) appendErrorMessage(`La consulta fue bloqueada por los filtros de seguridad (${data.promptFeedback.blockReason}).`);
                 if (voiceActive) botText = "Tu consulta fue bloqueada por los filtros de seguridad. Probá formularla de otra manera.";
             } else {
-                const candidate = data.candidates?.[0];
-                const parts = candidate?.content?.parts || [];
+                const candidate = data.candidates && data.candidates[0];
+                const parts = (candidate && candidate.content && candidate.content.parts) || [];
                 const answer = parts.filter(p => typeof p.text === 'string' && !p.thought).map(p => p.text).join('').trim();
 
                 if (answer) {
@@ -2067,7 +2451,7 @@
                     if (chatId === currentChatId) appendBotMessageUI(answer, sources);
                     botText = answer;
                 } else {
-                    const reason = candidate?.finishReason ? ` (motivo: ${candidate.finishReason})` : '';
+                    const reason = candidate && candidate.finishReason ? ` (motivo: ${candidate.finishReason})` : '';
                     if (chatId === currentChatId) appendErrorMessage('No se recibió texto en la respuesta devuelta' + reason + '.');
                     if (voiceActive) botText = "No recibí texto en la respuesta. Probá preguntar de nuevo.";
                 }
@@ -2076,7 +2460,7 @@
             statusBox.element.remove();
             if (error.name === 'AbortError') {
                 if (timedOut && chatId === currentChatId) {
-                    appendErrorMessage("⏱ La respuesta tardó demasiado (45 s) y se canceló. Probá de nuevo.");
+                    appendErrorMessage("⏱ La respuesta tardó demasiado (60 s) y se canceló. Probá de nuevo.");
                     if (voiceActive) botText = "La respuesta tardó demasiado. Probá de nuevo.";
                 }
             } else {
@@ -2088,9 +2472,8 @@
             clearTimeout(staleTimer);
             isBusy = false;
             currentAbort = null;
-            userInput.disabled = false;
             sendBtn.disabled = false;
-            if (!voiceActive) userInput.focus();
+            if (!voiceActive && isFinePointer()) userInput.focus();
             scrollToBottom();
         }
 
@@ -2102,11 +2485,26 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function appendUserMessageUI(text) {
+    function appendUserMessageUI(text, files = []) {
         const container = document.createElement('div');
-        container.className = "flex justify-end gap-3 max-w-3xl ml-auto";
+        container.className = "user-row flex justify-end gap-3 w-full";
+        let filesHtml = '';
+        if (files && files.length) {
+            filesHtml = `<div class="flex flex-wrap gap-1.5 mb-2 justify-end">` + files.map(f => {
+                if (f.kind === 'image' && f.dataUrl) {
+                    return `<img src="${f.dataUrl}" alt="${escapeHtml(f.name)}" class="max-w-[180px] max-h-[180px] rounded-lg border border-claude-border object-cover">`;
+                }
+                return `<span class="inline-flex items-center gap-1.5 bg-claude-card border border-claude-border rounded-lg px-2 py-1 text-[11.5px] text-claude-muted max-w-[200px]">
+                    <span class="shrink-0">${attachIcon(f.kind)}</span>
+                    <span class="truncate" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+                </span>`;
+            }).join('') + `</div>`;
+        }
+        const textHtml = text ? `<div class="whitespace-pre-wrap break-words overflow-wrap-anywhere">${escapeHtml(text)}</div>` : '';
         container.innerHTML = `
-            <div class="user-bubble max-w-[80%] bg-claude-raised text-claude-text text-[16px] leading-[1.6] px-4 py-3 rounded-[18px] whitespace-pre-wrap break-words">${escapeHtml(text)}</div>
+            <div class="user-bubble min-w-0 max-w-[85%] bg-claude-raised text-claude-text text-[16px] leading-[1.6] px-4 py-3 rounded-[18px]">
+                ${filesHtml}${textHtml}
+            </div>
         `;
         chatMessages.appendChild(container);
         scrollToBottom();
